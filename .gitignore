@@ -1,0 +1,5 @@
+# Root dependencies
+node_modules/
+
+# Root logs
+*.log

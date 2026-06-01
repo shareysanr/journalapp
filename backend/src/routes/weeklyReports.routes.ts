@@ -1,47 +1,38 @@
 import { Request, Response, Router } from "express";
+import {
+  generateWeeklyReport,
+  isValidDateString
+} from "../services/weeklyReportService";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
 
-// Place holder entries so far
-router.get("/api/v1/weekly-reports/:reportId", requireAuth, (req: Request, res: Response) => {
-  const reportId = Number(req.params.reportId);
-
-  res.json({
-    data: {
-      id: reportId,
-      weekStartDate: "2026-05-04",
-      weekEndDate: "2026-05-10",
-      summary: "Placeholder weekly report summary.",
-      commonDistractions: [],
-      commonNegativeComponents: [],
-      commonPositiveComponents: [],
-      accomplishments: 0,
-      failures: 0,
-      recommendations: "Placeholder recommendation.",
-      averageRating: 0,
-      entryIds: []
+router.get("/api/v1/weekly-reports/:reportId", requireAuth, (_req: Request, res: Response) => {
+  res.status(501).json({
+    error: {
+      message: "Weekly reports are not stored yet. Generate a report with POST /api/v1/weekly-reports."
     }
   });
 });
 
-router.post("/api/v1/weekly-reports", requireAuth, (req: Request, res: Response) => {
-  res.status(201).json({
-    data: {
-      id: 1,
-      weekStartDate: req.body.weekStartDate,
-      weekEndDate: req.body.weekEndDate,
-      summary: "Generated placeholder weekly report.",
-      commonDistractions: [],
-      commonNegativeComponents: [],
-      commonPositiveComponents: [],
-      accomplishments: 0,
-      failures: 0,
-      recommendations: "Placeholder recommendation.",
-      averageRating: 0,
-      entryIds: []
-    }
-  });
+router.post("/api/v1/weekly-reports", requireAuth, async (req: Request, res: Response) => {
+  const { weekStartDate, weekEndDate } = req.body;
+
+  if (!isValidDateString(weekStartDate) || !isValidDateString(weekEndDate)) {
+    return res.status(400).json({
+      error: { message: "weekStartDate and weekEndDate must be valid YYYY-MM-DD dates" }
+    });
+  }
+
+  if (weekStartDate > weekEndDate) {
+    return res.status(400).json({
+      error: { message: "weekStartDate must be on or before weekEndDate" }
+    });
+  }
+
+  const report = await generateWeeklyReport(req.auth!.sub, weekStartDate, weekEndDate);
+
+  res.status(201).json({ data: report });
 });
 
 export default router;

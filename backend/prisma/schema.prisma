@@ -1,0 +1,27 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Entry {
+  id                 Int      @id @default(autoincrement())
+  userId             String   @map("user_id")
+  date               DateTime @db.Date
+  goalsPlanned       String   @map("goals_planned")
+  numGoals           Int      @map("num_goals")
+  goalsCompleted     Int      @map("goals_completed")
+  distractions       String[]
+  negativeComponents String[] @map("negative_components")
+  positiveComponents String[] @map("positive_components")
+  difficulty         Int
+  rating             Int
+  notes              String?
+
+  @@map("entries")
+}
