@@ -1,0 +1,38 @@
+# Builds the backend Docker image and pushes it to Docker Hub.
+name: Build and Push Backend Docker Image
+
+on:
+  push:
+    branches:
+      - main
+  # Only run when backend code changes or this workflow file changes.
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-docker.yml"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Download the repository so Docker can access backend/Dockerfile and source files.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Authenticate with Docker Hub using repository secrets.
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      # Build the image from backend/Dockerfile and push both tags to Docker Hub.
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/journalapp-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/journalapp-backend:${{ github.sha }}

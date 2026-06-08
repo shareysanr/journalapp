@@ -4,9 +4,9 @@ import { generateWeeklyReport } from "../services/weeklyReportService";
 
 // Every Sunday at 11:59 PM (server local time).
 // Cron format: minute hour day-of-month month day-of-week
-//const WEEKLY_REPORT_SCHEDULE = "59 23 * * 0";
+const WEEKLY_REPORT_SCHEDULE = "59 23 * * 0";
 
-const WEEKLY_REPORT_SCHEDULE = "* * * * *";
+//const WEEKLY_REPORT_SCHEDULE = "* * * * *";
 function formatLocalDate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

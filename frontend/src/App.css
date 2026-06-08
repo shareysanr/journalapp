@@ -141,3 +141,30 @@ button:disabled {
   line-height: 1.5;
   white-space: pre-wrap;
 }
+
+.navbar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.navbar .nav-button {
+  align-self: auto;
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.navbar .nav-button:hover {
+  background: #d1d5db;
+}
+
+.navbar .nav-button.active {
+  background: #2563eb;
+  color: #fff;
+}
+
+.navbar .nav-button.active:hover {
+  background: #1d4ed8;
+}
