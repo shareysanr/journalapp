@@ -53,6 +53,12 @@ export async function apiRequest<T>(
   const body = (await response.json()) as T & ApiErrorBody;
 
   if (!response.ok) {
+    if (auth && response.status === 401) {
+      clearAccessToken();
+      window.location.assign("/login?session=expired");
+      throw new Error("Your session has expired. Please log in again.");
+    }
+
     const message = body.error?.message ?? `Request failed (${response.status})`;
     throw new Error(message);
   }

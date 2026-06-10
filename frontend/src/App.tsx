@@ -1,46 +1,43 @@
-import { useState } from "react";
-import { clearAccessToken, getAccessToken, setAccessToken } from "./api";
-import Layout from "./components/Layout";
-import Navbar from "./components/Navbar";
-import LoginPage from "./pages/LoginPage";
+import { Navigate, Route, Routes } from "react-router-dom";
+import AppLayout from "./components/AppLayout";
+import GuestRoute from "./components/GuestRoute";
+import ProtectedRoute from "./components/ProtectedRoute";
+import PublicLayout from "./components/PublicLayout";
+import ConfirmSignupPage from "./pages/ConfirmSignupPage";
 import DashboardPage from "./pages/DashboardPage";
+import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
 import NewEntryPage from "./pages/NewEntryPage";
+import EditEntryPage from "./pages/EditEntryPage";
+import ViewEntriesPage from "./pages/ViewEntriesPage";
 import ReportsPage from "./pages/ReportsPage";
-import "./App.css";
-
-type Route = "dashboard" | "new-entry" | "reports";
+import SignupPage from "./pages/SignupPage";
+import ViewReportPage from "./pages/ViewReportPage";
 
 export default function App() {
-  const [accessToken, setAccessTokenState] = useState<string | null>(() => getAccessToken());
-  const [route, setRoute] = useState<Route>("dashboard");
-
-  function handleLoggedIn(token: string) {
-    setAccessToken(token);
-    setAccessTokenState(token);
-    setRoute("dashboard");
-  }
-
-  function handleLogout() {
-    clearAccessToken();
-    setAccessTokenState(null);
-    setRoute("dashboard");
-  }
-
-  if (!accessToken) {
-    return (
-      <Layout>
-        <LoginPage onLoggedIn={handleLoggedIn} />
-      </Layout>
-    );
-  }
-
   return (
-    <Layout>
-      <Navbar route={route} onNavigate={setRoute} onLogout={handleLogout} />
+    <Routes>
+      <Route element={<GuestRoute />}>
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/confirm" element={<ConfirmSignupPage />} />
+        </Route>
+      </Route>
 
-      {route === "dashboard" && <DashboardPage />}
-      {route === "new-entry" && <NewEntryPage />}
-      {route === "reports" && <ReportsPage />}
-    </Layout>
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/entries" element={<ViewEntriesPage />} />
+          <Route path="/entries/new" element={<NewEntryPage />} />
+          <Route path="/entries/:entryId/edit" element={<EditEntryPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/reports/view" element={<ViewReportPage />} />
+        </Route>
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

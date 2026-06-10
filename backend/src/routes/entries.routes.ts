@@ -2,6 +2,10 @@ import { Request, Response, Router } from "express";
 import type { Entry as PrismaEntry } from "../generated/prisma/client";
 import { prisma } from "../config/prisma";
 import { requireAuth } from "../middleware/requireAuth";
+import {
+  dateStringToUtcStart,
+  getUpcomingReportEntryRange
+} from "../utils/reportSchedule";
 
 const router = Router();
 
@@ -72,6 +76,30 @@ router.post("/api/v1/entries", requireAuth, async (req: Request, res: Response) 
   });
 
   res.status(201).json({ data: toEntry(entry) });
+});
+
+router.get("/api/v1/entries", requireAuth, async (req: Request, res: Response) => {
+  const userId = req.auth!.sub;
+  const { startDate, endDate } = getUpcomingReportEntryRange();
+
+  const rows = await prisma.entry.findMany({
+    where: {
+      userId,
+      date: {
+        gte: dateStringToUtcStart(startDate),
+        lte: dateStringToUtcStart(endDate)
+      }
+    },
+    orderBy: [{ date: "desc" }, { id: "desc" }]
+  });
+
+  res.json({
+    data: {
+      entries: rows.map(toEntry),
+      startDate,
+      endDate
+    }
+  });
 });
 
 router.get("/api/v1/entries/:entryId", requireAuth, async (req: Request, res: Response) => {

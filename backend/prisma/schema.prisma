@@ -25,3 +25,23 @@ model Entry {
 
   @@map("entries")
 }
+
+model WeeklyReport {
+  id                       Int      @id @default(autoincrement())
+  userId                   String   @map("user_id")
+  weekStartDate            DateTime @db.Date @map("week_start_date")
+  weekEndDate              DateTime @db.Date @map("week_end_date")
+  summary                  String
+  recommendations          String
+  accomplishments          Int
+  failures                 Int
+  averageRating            Float    @map("average_rating")
+  commonDistractions       String[] @map("common_distractions")
+  commonNegativeComponents String[] @map("common_negative_components")
+  commonPositiveComponents String[] @map("common_positive_components")
+  entryIds                 Int[]    @map("entry_ids")
+  createdAt                DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, weekStartDate, weekEndDate])
+  @@map("weekly_reports")
+}

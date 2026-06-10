@@ -4,6 +4,7 @@ import cors from "cors";
 import authRoutes from "./routes/auth.routes";
 import entriesRoutes from "./routes/entries.routes";
 import weeklyReportsRoutes from "./routes/weeklyReports.routes";
+import dashboardRoutes from "./routes/dashboard.routes";
 import { startWeeklyReportJob } from "./jobs/weeklyReportJob";
 
 const app = express();
@@ -18,6 +19,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use(authRoutes);
 app.use(entriesRoutes);
 app.use(weeklyReportsRoutes);
+app.use(dashboardRoutes);
 
 // Port information
 const PORT = process.env.PORT ?? 3000;
