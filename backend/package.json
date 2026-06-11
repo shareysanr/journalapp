@@ -6,7 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "DOTENV_CONFIG_PATH=.env ts-node-dev --respawn src/server.ts",
     "build": "tsc",
-    "start": "DOTENV_CONFIG_PATH=.env node dist/server.js"
+    "start": "node dist/server.js"
   },
   "keywords": [],
   "author": "",

@@ -9,7 +9,13 @@ import { startWeeklyReportJob } from "./jobs/weeklyReportJob";
 
 const app = express();
 
-app.use(cors());
+const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
+
+app.use(
+  cors({
+    origin: frontendUrl
+  })
+);
 app.use(express.json());
 
 app.get("/", (req: Request, res: Response) => {

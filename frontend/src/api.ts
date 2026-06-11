@@ -1,7 +1,22 @@
-// In dev, use same-origin /api (Vite proxies to localhost:3000) to avoid CORS blocking POST.
-// Set VITE_API_BASE=http://localhost:3000 to call the backend directly.
-export const API_BASE =
-  import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? "" : "http://localhost:3000");
+// In dev, use same-origin /api (Vite proxies to localhost:3000) unless VITE_API_BASE is set.
+// In production, VITE_API_BASE must be set at build time (e.g. your Render backend URL).
+function resolveApiBase(): string {
+  const configured = import.meta.env.VITE_API_BASE;
+
+  if (import.meta.env.DEV) {
+    return configured ?? "";
+  }
+
+  if (!configured) {
+    throw new Error(
+      "VITE_API_BASE is not set. Configure it in Netlify (or your host) before building the frontend."
+    );
+  }
+
+  return configured;
+}
+
+export const API_BASE = resolveApiBase();
 
 type ApiErrorBody = {
   error?: { message?: string };
