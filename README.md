@@ -1,5 +1,7 @@
 # Clarity
 
+https://github.com/user-attachments/assets/0ba7281c-603a-49f3-8086-673b579ecbc7
+
 **Live site:** [https://clarityjournal.netlify.app](https://clarityjournal.netlify.app)
 
 ## Overview
