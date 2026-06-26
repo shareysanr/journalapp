@@ -46,6 +46,10 @@ function getInitialFormState(initialValues?: Entry) {
   };
 }
 
+function getDefaultFormState() {
+  return getInitialFormState();
+}
+
 export default function EntryForm({ entryId, initialValues, onSaved }: EntryFormProps) {
   const isEditMode = entryId !== undefined;
   const initial = getInitialFormState(initialValues);
@@ -62,6 +66,19 @@ export default function EntryForm({ entryId, initialValues, onSaved }: EntryForm
   const [difficulty, setDifficulty] = useState(initial.difficulty);
   const [rating, setRating] = useState(initial.rating);
   const [notes, setNotes] = useState(initial.notes);
+
+  function resetFormFields() {
+    const defaults = getDefaultFormState();
+    setGoalsPlanned(defaults.goalsPlanned);
+    setNumGoals(defaults.numGoals);
+    setGoalsCompleted(defaults.goalsCompleted);
+    setDistractions(defaults.distractions);
+    setNegativeComponents(defaults.negativeComponents);
+    setPositiveComponents(defaults.positiveComponents);
+    setDifficulty(defaults.difficulty);
+    setRating(defaults.rating);
+    setNotes(defaults.notes);
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -97,7 +114,8 @@ export default function EntryForm({ entryId, initialValues, onSaved }: EntryForm
         body: JSON.stringify(payload)
       });
 
-      setSuccess(`Entry created for ${response.data.date} (id ${response.data.id}).`);
+      resetFormFields();
+      setSuccess(`Entry created for ${response.data.date}.`);
     } catch (err) {
       const message =
         err instanceof Error

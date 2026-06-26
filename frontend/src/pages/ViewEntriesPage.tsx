@@ -17,6 +17,21 @@ function formatDisplayDate(dateString: string): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+function getWeekEndDate(weekStartDate: string): string {
+  const [year, month, day] = weekStartDate.split("-").map(Number);
+  const weekStart = new Date(year, month - 1, day);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  return formatLocalDate(weekEnd);
+}
+
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function truncate(text: string, maxLength: number): string {
   const trimmed = text.trim();
   if (trimmed.length <= maxLength) {
@@ -28,7 +43,6 @@ function truncate(text: string, maxLength: number): string {
 export default function ViewEntriesPage() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [startDate, setStartDate] = useState<string | null>(null);
-  const [endDate, setEndDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -43,7 +57,6 @@ export default function ViewEntriesPage() {
       });
       setEntries(response.data.entries);
       setStartDate(response.data.startDate);
-      setEndDate(response.data.endDate);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load entries");
     } finally {
@@ -78,10 +91,8 @@ export default function ViewEntriesPage() {
   }
 
   const dateRangeLabel =
-    startDate && endDate
-      ? startDate === endDate
-        ? formatDisplayDate(startDate)
-        : `${formatDisplayDate(startDate)} – ${formatDisplayDate(endDate)}`
+    startDate
+      ? `${formatDisplayDate(startDate)} – ${formatDisplayDate(getWeekEndDate(startDate))}`
       : null;
 
   return (
