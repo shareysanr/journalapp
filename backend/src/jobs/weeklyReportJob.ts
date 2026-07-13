@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { prisma } from "../config/prisma";
-import { generateWeeklyReport, saveWeeklyReport } from "../services/weeklyReportService";
+import { publishWeeklyReportJob } from "../queues/weeklyReportQueue";
 import {
   dateStringToUtcStart,
   getPreviousWeekRange,
@@ -34,29 +34,29 @@ async function runWeeklyReportJob(): Promise<void> {
   const userIds = await getUserIdsWithEntriesInRange(weekStartDate, weekEndDate);
 
   if (userIds.length === 0) {
-    console.log("[weekly-report-job] No users with entries in this week. Nothing to do.");
+    console.log("[weekly-report-job] No users with entries in this week. Nothing to queue.");
     return;
   }
 
-  console.log(`[weekly-report-job] Found ${userIds.length} user(s) with entries`);
+  console.log(
+    `[weekly-report-job] Found ${userIds.length} user(s) with entries — queueing weekly report jobs`
+  );
 
   for (const userId of userIds) {
     try {
-      const report = await generateWeeklyReport(userId, weekStartDate, weekEndDate);
-      const saved = await saveWeeklyReport(userId, report);
-
-      console.log(`[weekly-report-job] Success for user ${userId} (report id ${saved.id})`);
-      console.log(`  Summary: ${report.summary}`);
-      console.log(`  Recommendations: ${report.recommendations}`);
+      await publishWeeklyReportJob({ userId, weekStartDate, weekEndDate });
       console.log(
-        `  Stats — accomplishments: ${report.accomplishments}, failures: ${report.failures}, averageRating: ${report.averageRating}, entries: ${report.entryIds.length}`
+        `[weekly-report-job] Queued weekly report job for user ${userId} (${weekStartDate} to ${weekEndDate})`
       );
     } catch (err) {
-      console.error(`[weekly-report-job] Failed for user ${userId}:`, err);
+      console.error(
+        `[weekly-report-job] Failed to queue weekly report job for user ${userId}:`,
+        err
+      );
     }
   }
 
-  console.log("[weekly-report-job] Weekly report job finished");
+  console.log("[weekly-report-job] Weekly report queueing pass finished");
 }
 
 export function startWeeklyReportJob(): void {

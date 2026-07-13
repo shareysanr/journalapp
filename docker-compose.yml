@@ -12,5 +12,13 @@ services:
     volumes:
       - journalapp_postgres_data:/var/lib/postgresql/data
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: journalapp-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
 volumes:
   journalapp_postgres_data:
