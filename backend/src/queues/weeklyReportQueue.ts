@@ -2,7 +2,7 @@ import type { Channel } from "amqplib";
 import { getRabbitmqChannel } from "../config/rabbitmq";
 
 export type WeeklyReportJobMessage = {
-  userId: string;
+  userId: number;
   weekStartDate: string;
   weekEndDate: string;
 };

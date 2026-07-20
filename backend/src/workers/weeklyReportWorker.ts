@@ -14,7 +14,8 @@ function isWeeklyReportJobMessage(payload: unknown): payload is WeeklyReportJobM
 
   const value = payload as Partial<WeeklyReportJobMessage>;
   return (
-    typeof value.userId === "string" &&
+    typeof value.userId === "number" &&
+    Number.isInteger(value.userId) &&
     typeof value.weekStartDate === "string" &&
     typeof value.weekEndDate === "string"
   );

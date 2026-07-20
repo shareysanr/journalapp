@@ -10,7 +10,7 @@ import {
 const router = Router();
 
 router.get("/api/v1/dashboard/stats", requireAuth, async (req: Request, res: Response) => {
-  const userId = req.auth!.sub;
+  const userId = req.auth!.userId;
   const { weekStartDate, weekEndDate } = getCurrentWeekRange();
 
   const weekDateFilter = {

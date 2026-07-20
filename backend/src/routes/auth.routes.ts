@@ -166,6 +166,7 @@ router.post("/api/v1/login", async (req: Request, res: Response) => {
 router.get("/api/v1/me", requireAuth, (req: Request, res: Response) => {
   res.json({
     data: {
+      userId: req.auth?.userId,
       sub: req.auth?.sub,
       username: req.auth?.username
     }

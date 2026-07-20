@@ -87,7 +87,7 @@ function computeAverageRating(ratings: number[]): number {
 }
 
 export async function generateWeeklyReport(
-  userId: string,
+  userId: number,
   weekStartDate: string,
   weekEndDate: string
 ): Promise<WeeklyReport> {
@@ -157,7 +157,7 @@ export async function generateWeeklyReport(
 }
 
 export async function saveWeeklyReport(
-  userId: string,
+  userId: number,
   report: WeeklyReport
 ): Promise<StoredWeeklyReport> {
   const weekStartDate = toDateOnly(report.weekStartDate);
@@ -201,7 +201,7 @@ export async function saveWeeklyReport(
   return dbRowToWeeklyReport(row);
 }
 
-export async function listWeeklyReports(userId: string): Promise<StoredWeeklyReport[]> {
+export async function listWeeklyReports(userId: number): Promise<StoredWeeklyReport[]> {
   const rows = await prisma.weeklyReport.findMany({
     where: { userId },
     orderBy: [{ weekEndDate: "desc" }, { createdAt: "desc" }]
@@ -211,7 +211,7 @@ export async function listWeeklyReports(userId: string): Promise<StoredWeeklyRep
 }
 
 export async function getWeeklyReportById(
-  userId: string,
+  userId: number,
   reportId: number
 ): Promise<StoredWeeklyReport | null> {
   const row = await prisma.weeklyReport.findFirst({

@@ -71,7 +71,9 @@ Clarity is designed for people who want a consistent way to reflect on productiv
   - `cp backend/.env.example backend/.env`
 3. Start the backend:
   - `cd backend && npm ci && npx prisma generate && npx prisma db push && npm run dev`
-4. Start the frontend:
+4. (Optional) Start the weekly-report worker in a second terminal:
+  - `cd backend && npm run dev:worker:weekly-reports`
+5. Start the frontend:
   - `cd frontend && npm ci && npm run dev`
 
 Environment reference files:
@@ -80,6 +82,27 @@ Environment reference files:
 - `frontend/.env.example`
 
 Note: `VITE_API_BASE` is required for production builds, but not for local `npm run dev`.
+
+### Users table and identity
+
+Postgres stores a `users` row with an integer `id` and Cognito `cognito_sub`. Entries and weekly reports reference `users.id` (not the Cognito sub). The first authenticated API request creates the user row via `findOrCreate`.
+
+`GET /api/v1/me` returns `{ userId, sub, username }` — use numeric `userId` for CloudAMQP manual test payloads:
+
+```json
+{"userId":1,"weekStartDate":"2026-07-07","weekEndDate":"2026-07-13"}
+```
+
+### Deploy notes (Render + Neon)
+
+When applying this schema change in production:
+
+1. **Wipe** existing `entries` and `weekly_reports` rows (clean break). Cognito users are **not** deleted.
+2. Run `npx prisma db push` (or `db push --accept-data-loss` if Prisma requires it for the `user_id` type change) against Neon, then `npx prisma generate` in the build.
+3. Redeploy **web** and **background worker** together so both treat queue `userId` as a number.
+4. Start commands stay the same (`npm start` / `npm run worker:weekly-reports`). No new env vars.
+5. Drain any old CloudAMQP messages that still have string Cognito-sub `userId` values.
+6. After deploy, log in once (creates `users` row), recreate a few entries, then test reports.
 
 ## Testing
 

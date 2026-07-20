@@ -10,7 +10,7 @@ import {
 async function getUserIdsWithEntriesInRange(
   weekStartDate: string,
   weekEndDate: string
-): Promise<string[]> {
+): Promise<number[]> {
   const rows = await prisma.entry.findMany({
     where: {
       date: {

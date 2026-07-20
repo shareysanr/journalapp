@@ -61,7 +61,7 @@ router.post("/api/v1/entries", requireAuth, async (req: Request, res: Response) 
 
   const entry = await prisma.entry.create({
     data: {
-      userId: req.auth!.sub,
+      userId: req.auth!.userId,
       date: new Date(date),
       goalsPlanned,
       numGoals,
@@ -79,7 +79,7 @@ router.post("/api/v1/entries", requireAuth, async (req: Request, res: Response) 
 });
 
 router.get("/api/v1/entries", requireAuth, async (req: Request, res: Response) => {
-  const userId = req.auth!.sub;
+  const userId = req.auth!.userId;
   const { startDate, endDate } = getUpcomingReportEntryRange();
 
   const rows = await prisma.entry.findMany({
@@ -105,7 +105,7 @@ router.get("/api/v1/entries", requireAuth, async (req: Request, res: Response) =
 router.get("/api/v1/entries/:entryId", requireAuth, async (req: Request, res: Response) => {
   const entryId = Number(req.params.entryId);
   const entry = await prisma.entry.findFirst({
-    where: { id: entryId, userId: req.auth!.sub }
+    where: { id: entryId, userId: req.auth!.userId }
   });
 
   if (!entry) {
@@ -132,7 +132,7 @@ router.put("/api/v1/entries/:entryId", requireAuth, async (req: Request, res: Re
   } = req.body;
 
   const existing = await prisma.entry.findFirst({
-    where: { id: entryId, userId: req.auth!.sub }
+    where: { id: entryId, userId: req.auth!.userId }
   });
 
   if (!existing) {
@@ -162,7 +162,7 @@ router.put("/api/v1/entries/:entryId", requireAuth, async (req: Request, res: Re
 router.delete("/api/v1/entries/:entryId", requireAuth, async (req: Request, res: Response) => {
   const entryId = Number(req.params.entryId);
   const result = await prisma.entry.deleteMany({
-    where: { id: entryId, userId: req.auth!.sub }
+    where: { id: entryId, userId: req.auth!.userId }
   });
 
   if (result.count === 0) {

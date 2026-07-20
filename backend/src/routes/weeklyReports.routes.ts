@@ -10,13 +10,13 @@ import { requireAuth } from "../middleware/requireAuth";
 const router = Router();
 
 router.get("/api/v1/weekly-reports", requireAuth, async (req: Request, res: Response) => {
-  const reports = await listWeeklyReports(req.auth!.sub);
+  const reports = await listWeeklyReports(req.auth!.userId);
   res.json({ data: reports });
 });
 
 router.get("/api/v1/weekly-reports/:reportId", requireAuth, async (req: Request, res: Response) => {
   const reportId = Number(req.params.reportId);
-  const report = await getWeeklyReportById(req.auth!.sub, reportId);
+  const report = await getWeeklyReportById(req.auth!.userId, reportId);
 
   if (!report) {
     return res.status(404).json({
@@ -42,7 +42,7 @@ router.post("/api/v1/weekly-reports", requireAuth, async (req: Request, res: Res
     });
   }
 
-  const report = await generateWeeklyReport(req.auth!.sub, weekStartDate, weekEndDate);
+  const report = await generateWeeklyReport(req.auth!.userId, weekStartDate, weekEndDate);
 
   res.status(201).json({ data: report });
 });
