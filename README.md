@@ -86,9 +86,9 @@ Note: `VITE_API_BASE` is required for production builds, but not for local `npm 
 
 For saved weekly reports locally, also start RabbitMQ (`docker compose up -d rabbitmq`) and set `RABBITMQ_URL` in `backend/.env`. Preview Report works without the worker.
 
-## Testing
+## RabbitMQ
 
-Automated tests are not yet implemented.
+https://github.com/user-attachments/assets/dbb4d280-00bc-458e-bb3d-f661f95e0e1a
 
 ## Contact
 
