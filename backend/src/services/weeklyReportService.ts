@@ -5,8 +5,9 @@ import {
   generateWeeklyNarrative,
   type WeeklyNarrativeInput
 } from "../config/openai";
+import { computeWeeklyEntryMetrics, formatDateString, toDateOnly } from "./weeklyReportCalculations";
 
-const TOP_COMMON_LIMIT = 5;
+export { isValidDateString } from "./weeklyReportCalculations";
 
 export type WeeklyReport = {
   weekStartDate: string;
@@ -26,13 +27,6 @@ export type StoredWeeklyReport = WeeklyReport & {
   id: number;
 };
 
-function formatDateString(date: Date | string): string {
-  if (date instanceof Date) {
-    return date.toISOString().split("T")[0];
-  }
-  return String(date).split("T")[0];
-}
-
 function dbRowToWeeklyReport(row: WeeklyReportRow): StoredWeeklyReport {
   return {
     id: row.id,
@@ -48,42 +42,6 @@ function dbRowToWeeklyReport(row: WeeklyReportRow): StoredWeeklyReport {
     commonPositiveComponents: row.commonPositiveComponents,
     entryIds: row.entryIds
   };
-}
-
-function toDateOnly(dateString: string): Date {
-  return new Date(`${dateString}T00:00:00.000Z`);
-}
-
-export function isValidDateString(value: unknown): value is string {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value);
-}
-
-function topCommon(values: string[], limit: number): string[] {
-  const counts = new Map<string, number>();
-  for (const value of values) {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      continue;
-    }
-    counts.set(trimmed, (counts.get(trimmed) ?? 0) + 1);
-  }
-
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, limit)
-    .map(([name]) => name);
-}
-
-function computeAverageRating(ratings: number[]): number {
-  if (ratings.length === 0) {
-    return 0;
-  }
-  const sum = ratings.reduce((total, rating) => total + rating, 0);
-  return Math.round((sum / ratings.length) * 10) / 10;
 }
 
 export async function generateWeeklyReport(
@@ -111,31 +69,18 @@ export async function generateWeeklyReport(
     orderBy: { date: "asc" }
   });
 
-  const accomplishments = entries.reduce((sum, entry) => sum + entry.goalsCompleted, 0);
-  const totalGoals = entries.reduce((sum, entry) => sum + entry.numGoals, 0);
-  const failures = Math.max(0, totalGoals - accomplishments);
-  const averageRating = computeAverageRating(entries.map((entry) => entry.rating));
-  const commonDistractions = topCommon(entries.flatMap((entry) => entry.distractions), TOP_COMMON_LIMIT);
-  const commonNegativeComponents = topCommon(
-    entries.flatMap((entry) => entry.negativeComponents),
-    TOP_COMMON_LIMIT
-  );
-  const commonPositiveComponents = topCommon(
-    entries.flatMap((entry) => entry.positiveComponents),
-    TOP_COMMON_LIMIT
-  );
-  const entryIds = entries.map((entry) => entry.id);
+  const metrics = computeWeeklyEntryMetrics(entries);
 
   const narrativeInput: WeeklyNarrativeInput = {
     weekStartDate,
     weekEndDate,
-    accomplishments,
-    failures,
-    averageRating,
-    commonDistractions,
-    commonNegativeComponents,
-    commonPositiveComponents,
-    entryCount: entries.length
+    accomplishments: metrics.accomplishments,
+    failures: metrics.failures,
+    averageRating: metrics.averageRating,
+    commonDistractions: metrics.commonDistractions,
+    commonNegativeComponents: metrics.commonNegativeComponents,
+    commonPositiveComponents: metrics.commonPositiveComponents,
+    entryCount: metrics.entryCount
   };
 
   const narrative =
@@ -145,14 +90,14 @@ export async function generateWeeklyReport(
     weekStartDate,
     weekEndDate,
     summary: narrative.summary,
-    commonDistractions,
-    commonNegativeComponents,
-    commonPositiveComponents,
-    accomplishments,
-    failures,
+    commonDistractions: metrics.commonDistractions,
+    commonNegativeComponents: metrics.commonNegativeComponents,
+    commonPositiveComponents: metrics.commonPositiveComponents,
+    accomplishments: metrics.accomplishments,
+    failures: metrics.failures,
     recommendations: narrative.recommendations,
-    averageRating,
-    entryIds
+    averageRating: metrics.averageRating,
+    entryIds: metrics.entryIds
   };
 }
 

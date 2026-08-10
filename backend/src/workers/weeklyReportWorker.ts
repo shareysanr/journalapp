@@ -1,25 +1,9 @@
 import "dotenv/config";
 import type { ConsumeMessage } from "amqplib";
 import { getRabbitmqChannel } from "../config/rabbitmq";
-import {
-  WEEKLY_REPORT_QUEUE_NAME,
-  type WeeklyReportJobMessage
-} from "../queues/weeklyReportQueue";
+import { WEEKLY_REPORT_QUEUE_NAME } from "../queues/weeklyReportQueue";
+import { isWeeklyReportJobMessage } from "../queues/weeklyReportJobMessage";
 import { generateWeeklyReport, saveWeeklyReport } from "../services/weeklyReportService";
-
-function isWeeklyReportJobMessage(payload: unknown): payload is WeeklyReportJobMessage {
-  if (!payload || typeof payload !== "object") {
-    return false;
-  }
-
-  const value = payload as Partial<WeeklyReportJobMessage>;
-  return (
-    typeof value.userId === "number" &&
-    Number.isInteger(value.userId) &&
-    typeof value.weekStartDate === "string" &&
-    typeof value.weekEndDate === "string"
-  );
-}
 
 export async function startWeeklyReportWorker(): Promise<void> {
   const channel = await getRabbitmqChannel();

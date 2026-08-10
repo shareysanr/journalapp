@@ -2,9 +2,9 @@ import { Request, Response, Router } from "express";
 import {
   generateWeeklyReport,
   getWeeklyReportById,
-  isValidDateString,
   listWeeklyReports
 } from "../services/weeklyReportService";
+import { isValidDateString } from "../services/weeklyReportCalculations";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
