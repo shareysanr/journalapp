@@ -8,6 +8,8 @@ https://github.com/user-attachments/assets/0ba7281c-603a-49f3-8086-673b579ecbc7
 
 Clarity is a personal productivity journal designed to help you track daily habits and reflect on weekly progress. Users can log goals, distractions, ratings, and notes, then view patterns through dashboard stats and weekly reporting. The app is built with a clean interface so entries and reports are easy to access across devices.
 
+Pull requests receive an automated diff-only AI code review via GitHub Actions.
+
 ## Technologies Used
 
 ### Frontend
