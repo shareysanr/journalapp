@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "../api";
+import MoodMotivationChart from "../components/MoodMotivationChart";
 
 type DashboardStats = {
   entriesThisWeek: number;
@@ -45,48 +46,51 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+    <>
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
 
-      {loading && <p className="mt-6 text-sm text-slate-600">Loading stats...</p>}
+        {loading && <p className="mt-6 text-sm text-slate-600">Loading stats...</p>}
 
-      {error && (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {error}
-        </div>
-      )}
-
-      {!loading && !error && stats && (
-        <div className="mt-6 grid grid-cols-2 gap-4">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-            <h2 className="text-sm font-semibold text-slate-900">Entries This Week</h2>
-            <p className="mt-2 text-2xl font-bold text-slate-900">
-              {stats.entriesThisWeek === 0 ? "No entries yet" : stats.entriesThisWeek}
-            </p>
+        {error && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {error}
           </div>
+        )}
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-            <h2 className="text-sm font-semibold text-slate-900">Goals Completed</h2>
-            <p className="mt-2 text-2xl font-bold text-slate-900">
-              {stats.entriesThisWeek === 0 ? "No entries yet" : stats.goalsCompletedThisWeek}
-            </p>
-          </div>
+        {!loading && !error && stats && (
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+              <h2 className="text-sm font-semibold text-slate-900">Entries This Week</h2>
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {stats.entriesThisWeek === 0 ? "No entries yet" : stats.entriesThisWeek}
+              </p>
+            </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-            <h2 className="text-sm font-semibold text-slate-900">Latest Rating</h2>
-            <p className="mt-2 text-2xl font-bold text-slate-900">
-              {stats.latestRating === null ? "No entries yet" : stats.latestRating}
-            </p>
-          </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+              <h2 className="text-sm font-semibold text-slate-900">Goals Completed</h2>
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {stats.entriesThisWeek === 0 ? "No entries yet" : stats.goalsCompletedThisWeek}
+              </p>
+            </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-            <h2 className="text-sm font-semibold text-slate-900">Next Report</h2>
-            <p className="mt-2 text-2xl font-bold text-slate-900">
-              {formatNextReport(stats.daysUntilNextReport)}
-            </p>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+              <h2 className="text-sm font-semibold text-slate-900">Latest Rating</h2>
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {stats.latestRating === null ? "No entries yet" : stats.latestRating}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+              <h2 className="text-sm font-semibold text-slate-900">Next Report</h2>
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {formatNextReport(stats.daysUntilNextReport)}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+      <MoodMotivationChart />
+    </>
   );
 }

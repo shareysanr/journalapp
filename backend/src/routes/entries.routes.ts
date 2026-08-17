@@ -2,10 +2,8 @@ import { Request, Response, Router } from "express";
 import type { Entry as PrismaEntry } from "../generated/prisma/client";
 import { prisma } from "../config/prisma";
 import { requireAuth } from "../middleware/requireAuth";
-import {
-  dateStringToUtcStart,
-  getUpcomingReportEntryRange
-} from "../utils/reportSchedule";
+import { parseEntryPayload } from "../utils/entryValidation";
+import { getUpcomingReportEntryRange } from "../utils/reportSchedule";
 
 const router = Router();
 
@@ -20,6 +18,8 @@ type Entry = {
   positiveComponents: string[];
   difficulty: number;
   rating: number;
+  mood: number | null;
+  motivation: number | null;
   notes: string;
 };
 
@@ -40,22 +40,19 @@ function toEntry(row: PrismaEntry): Entry {
     positiveComponents: row.positiveComponents,
     difficulty: row.difficulty,
     rating: row.rating,
+    mood: row.mood,
+    motivation: row.motivation,
     notes: row.notes ?? ""
   };
 }
 
 router.post("/api/v1/entries", requireAuth, async (req: Request, res: Response) => {
-  const {
-    goalsPlanned,
-    numGoals,
-    goalsCompleted,
-    distractions,
-    negativeComponents,
-    positiveComponents,
-    difficulty,
-    rating,
-    notes
-  } = req.body;
+  const parsed = parseEntryPayload(req.body);
+  if (!parsed.ok) {
+    return res.status(400).json({
+      error: { message: parsed.message }
+    });
+  }
 
   const date = new Date().toISOString().split("T")[0];
 
@@ -63,15 +60,7 @@ router.post("/api/v1/entries", requireAuth, async (req: Request, res: Response) 
     data: {
       userId: req.auth!.userId,
       date: new Date(date),
-      goalsPlanned,
-      numGoals,
-      goalsCompleted,
-      distractions: distractions ?? [],
-      negativeComponents: negativeComponents ?? [],
-      positiveComponents: positiveComponents ?? [],
-      difficulty,
-      rating,
-      notes: notes ?? null
+      ...parsed.data
     }
   });
 
@@ -83,13 +72,7 @@ router.get("/api/v1/entries", requireAuth, async (req: Request, res: Response) =
   const { startDate, endDate } = getUpcomingReportEntryRange();
 
   const rows = await prisma.entry.findMany({
-    where: {
-      userId,
-      date: {
-        gte: dateStringToUtcStart(startDate),
-        lte: dateStringToUtcStart(endDate)
-      }
-    },
+    where: { userId },
     orderBy: [{ date: "desc" }, { id: "desc" }]
   });
 
@@ -119,17 +102,12 @@ router.get("/api/v1/entries/:entryId", requireAuth, async (req: Request, res: Re
 
 router.put("/api/v1/entries/:entryId", requireAuth, async (req: Request, res: Response) => {
   const entryId = Number(req.params.entryId);
-  const {
-    goalsPlanned,
-    numGoals,
-    goalsCompleted,
-    distractions,
-    negativeComponents,
-    positiveComponents,
-    difficulty,
-    rating,
-    notes
-  } = req.body;
+  const parsed = parseEntryPayload(req.body);
+  if (!parsed.ok) {
+    return res.status(400).json({
+      error: { message: parsed.message }
+    });
+  }
 
   const existing = await prisma.entry.findFirst({
     where: { id: entryId, userId: req.auth!.userId }
@@ -143,17 +121,7 @@ router.put("/api/v1/entries/:entryId", requireAuth, async (req: Request, res: Re
 
   const entry = await prisma.entry.update({
     where: { id: entryId },
-    data: {
-      goalsPlanned,
-      numGoals,
-      goalsCompleted,
-      distractions: distractions ?? [],
-      negativeComponents: negativeComponents ?? [],
-      positiveComponents: positiveComponents ?? [],
-      difficulty,
-      rating,
-      notes: notes ?? null
-    }
+    data: parsed.data
   });
 
   res.json({ data: toEntry(entry) });

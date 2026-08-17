@@ -74,6 +74,8 @@ describe("computeWeeklyEntryMetrics", () => {
       goalsCompleted: 2,
       numGoals: 3,
       rating: 4,
+      mood: 6,
+      motivation: 5,
       distractions: ["phone", ""],
       negativeComponents: ["stress"],
       positiveComponents: ["focus"]
@@ -83,6 +85,8 @@ describe("computeWeeklyEntryMetrics", () => {
       goalsCompleted: 1,
       numGoals: 2,
       rating: 5,
+      mood: 8,
+      motivation: 3,
       distractions: ["phone", "tv"],
       negativeComponents: ["stress", "fatigue"],
       positiveComponents: ["focus", "exercise"]
@@ -106,12 +110,62 @@ describe("computeWeeklyEntryMetrics", () => {
     expect(TOP_COMMON_LIMIT).toBe(5);
   });
 
+  it("computes mood and motivation averages, highs, and lows", () => {
+    const metrics = computeWeeklyEntryMetrics(entries);
+    expect(metrics.averageMood).toBe(7);
+    expect(metrics.highestMood).toBe(8);
+    expect(metrics.lowestMood).toBe(6);
+    expect(metrics.averageMotivation).toBe(4);
+    expect(metrics.highestMotivation).toBe(5);
+    expect(metrics.lowestMotivation).toBe(3);
+  });
+
+  it("skips null mood and motivation when computing scale stats", () => {
+    const metrics = computeWeeklyEntryMetrics([
+      {
+        id: 1,
+        goalsCompleted: 1,
+        numGoals: 1,
+        rating: 5,
+        mood: null,
+        motivation: 4,
+        distractions: [],
+        negativeComponents: [],
+        positiveComponents: []
+      },
+      {
+        id: 2,
+        goalsCompleted: 1,
+        numGoals: 1,
+        rating: 5,
+        mood: 8,
+        motivation: null,
+        distractions: [],
+        negativeComponents: [],
+        positiveComponents: []
+      }
+    ]);
+
+    expect(metrics.averageMood).toBe(8);
+    expect(metrics.highestMood).toBe(8);
+    expect(metrics.lowestMood).toBe(8);
+    expect(metrics.averageMotivation).toBe(4);
+    expect(metrics.highestMotivation).toBe(4);
+    expect(metrics.lowestMotivation).toBe(4);
+  });
+
   it("handles an empty entry list", () => {
     const metrics = computeWeeklyEntryMetrics([]);
     expect(metrics).toEqual({
       accomplishments: 0,
       failures: 0,
       averageRating: 0,
+      averageMood: null,
+      averageMotivation: null,
+      highestMood: null,
+      lowestMood: null,
+      highestMotivation: null,
+      lowestMotivation: null,
       commonDistractions: [],
       commonNegativeComponents: [],
       commonPositiveComponents: [],
@@ -127,6 +181,8 @@ describe("computeWeeklyEntryMetrics", () => {
         goalsCompleted: 5,
         numGoals: 3,
         rating: 5,
+        mood: 5,
+        motivation: 5,
         distractions: [],
         negativeComponents: [],
         positiveComponents: []

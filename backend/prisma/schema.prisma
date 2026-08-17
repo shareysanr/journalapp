@@ -31,6 +31,8 @@ model Entry {
   positiveComponents String[] @map("positive_components")
   difficulty         Int
   rating             Int
+  mood               Int?
+  motivation         Int?
   notes              String?
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

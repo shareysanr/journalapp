@@ -15,6 +15,8 @@ export type Entry = {
   positiveComponents: string[];
   difficulty: number;
   rating: number;
+  mood: number | null;
+  motivation: number | null;
   notes: string;
 };
 
@@ -42,6 +44,8 @@ function getInitialFormState(initialValues?: Entry) {
     positiveComponents: initialValues ? joinList(initialValues.positiveComponents) : "",
     difficulty: initialValues ? String(initialValues.difficulty) : "5",
     rating: initialValues ? String(initialValues.rating) : "7",
+    mood: initialValues?.mood ?? 5,
+    motivation: initialValues?.motivation ?? 5,
     notes: initialValues?.notes ?? ""
   };
 }
@@ -65,6 +69,8 @@ export default function EntryForm({ entryId, initialValues, onSaved }: EntryForm
   const [positiveComponents, setPositiveComponents] = useState(initial.positiveComponents);
   const [difficulty, setDifficulty] = useState(initial.difficulty);
   const [rating, setRating] = useState(initial.rating);
+  const [mood, setMood] = useState(initial.mood);
+  const [motivation, setMotivation] = useState(initial.motivation);
   const [notes, setNotes] = useState(initial.notes);
 
   function resetFormFields() {
@@ -77,6 +83,8 @@ export default function EntryForm({ entryId, initialValues, onSaved }: EntryForm
     setPositiveComponents(defaults.positiveComponents);
     setDifficulty(defaults.difficulty);
     setRating(defaults.rating);
+    setMood(defaults.mood);
+    setMotivation(defaults.motivation);
     setNotes(defaults.notes);
   }
 
@@ -94,6 +102,8 @@ export default function EntryForm({ entryId, initialValues, onSaved }: EntryForm
       positiveComponents: parseCommaList(positiveComponents),
       difficulty: Number(difficulty),
       rating: Number(rating),
+      mood,
+      motivation,
       notes: notes || undefined
     };
 
@@ -244,6 +254,40 @@ export default function EntryForm({ entryId, initialValues, onSaved }: EntryForm
               onChange={(e) => setRating(e.target.value)}
               required
               className={inputClassName}
+            />
+          </label>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+            <span className="flex items-center justify-between">
+              <span>Mood (1-10)</span>
+              <span className="text-base font-semibold text-slate-900">{mood}</span>
+            </span>
+            <input
+              type="range"
+              min={1}
+              max={10}
+              step={1}
+              value={mood}
+              onChange={(e) => setMood(Number(e.target.value))}
+              className="mt-1 w-full accent-indigo-600"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+            <span className="flex items-center justify-between">
+              <span>Motivation (1-10)</span>
+              <span className="text-base font-semibold text-slate-900">{motivation}</span>
+            </span>
+            <input
+              type="range"
+              min={1}
+              max={10}
+              step={1}
+              value={motivation}
+              onChange={(e) => setMotivation(Number(e.target.value))}
+              className="mt-1 w-full accent-indigo-600"
             />
           </label>
         </div>

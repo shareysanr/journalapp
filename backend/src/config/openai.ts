@@ -6,6 +6,12 @@ export type WeeklyNarrativeInput = {
   accomplishments: number;
   failures: number;
   averageRating: number;
+  averageMood: number | null;
+  averageMotivation: number | null;
+  highestMood: number | null;
+  lowestMood: number | null;
+  highestMotivation: number | null;
+  lowestMotivation: number | null;
   commonDistractions: string[];
   commonNegativeComponents: string[];
   commonPositiveComponents: string[];
@@ -81,13 +87,22 @@ export function fallbackWeeklyNarrative(input: WeeklyNarrativeInput): WeeklyNarr
     };
   }
 
-  const ratingText =
-    input.entryCount > 0 ? ` Your average rating was ${input.averageRating.toFixed(1)}.` : "";
+  const ratingText = ` Your average rating was ${input.averageRating.toFixed(1)}.`;
+  const moodText =
+    input.averageMood !== null && input.lowestMood !== null && input.highestMood !== null
+      ? ` Average mood was ${input.averageMood.toFixed(1)} (range ${input.lowestMood}–${input.highestMood}).`
+      : "";
+  const motivationText =
+    input.averageMotivation !== null &&
+    input.lowestMotivation !== null &&
+    input.highestMotivation !== null
+      ? ` Average motivation was ${input.averageMotivation.toFixed(1)} (range ${input.lowestMotivation}–${input.highestMotivation}).`
+      : "";
 
   return {
     summary:
       `From ${input.weekStartDate} to ${input.weekEndDate}, you logged ${input.entryCount} entries, ` +
-      `completed ${input.accomplishments} goals, and had ${input.failures} uncompleted goals.${ratingText}`,
+      `completed ${input.accomplishments} goals, and had ${input.failures} uncompleted goals.${ratingText}${moodText}${motivationText}`,
     recommendations:
       "Review your most common distractions and negative patterns, then schedule focused blocks around your top positive components next week."
   };
