@@ -3,36 +3,85 @@
 #   terraform import aws_cognito_user_pool.main us-east-2_XXXXXXXXX
 #
 # Do not apply if plan creates a new pool or replaces this one (users would be orphaned).
+# Pool name comes from terraform.tfvars and must match the imported pool exactly.
 
 resource "aws_cognito_user_pool" "main" {
   name = var.cognito_user_pool_name
+
+  username_attributes      = ["email"]
+  auto_verified_attributes = ["email"]
+  mfa_configuration        = "OFF"
+  deletion_protection      = "ACTIVE"
+  user_pool_tier           = "ESSENTIALS"
+
+  username_configuration {
+    case_sensitive = false
+  }
+
+  password_policy {
+    minimum_length                   = 8
+    password_history_size            = 0
+    require_lowercase                = true
+    require_numbers                  = true
+    require_symbols                  = true
+    require_uppercase                = true
+    temporary_password_validity_days = 7
+  }
+
+  account_recovery_setting {
+    recovery_mechanism {
+      name     = "verified_email"
+      priority = 1
+    }
+
+    recovery_mechanism {
+      name     = "verified_phone_number"
+      priority = 2
+    }
+  }
+
+  admin_create_user_config {
+    allow_admin_create_user_only = false
+  }
+
+  email_configuration {
+    email_sending_account = "COGNITO_DEFAULT"
+  }
+
+  schema {
+    name                     = "email"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = true
+
+    string_attribute_constraints {
+      min_length = "0"
+      max_length = "2048"
+    }
+  }
+
+  sign_in_policy {
+    allowed_first_auth_factors = ["PASSWORD"]
+  }
+
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_CODE"
+  }
 
   lifecycle {
     prevent_destroy = true
     ignore_changes = [
       alias_attributes,
-      username_attributes,
-      username_configuration,
-      auto_verified_attributes,
-      deletion_protection,
-      mfa_configuration,
-      password_policy,
-      schema,
-      account_recovery_setting,
-      admin_create_user_config,
       device_configuration,
-      email_configuration,
       email_mfa_configuration,
       sms_configuration,
       sms_authentication_message,
       lambda_config,
       user_attribute_update_settings,
       user_pool_add_ons,
-      user_pool_tier,
-      verification_message_template,
       software_token_mfa_configuration,
       web_authn_configuration,
-      sign_in_policy,
       tags,
       tags_all
     ]
@@ -48,8 +97,7 @@ resource "aws_cognito_user_pool" "main" {
 resource "aws_cognito_user_pool_client" "app" {
   name         = var.cognito_user_pool_client_name
   user_pool_id = aws_cognito_user_pool.main.id
-
-  generate_secret = var.cognito_generate_secret
+  # Do not set generate_secret for the imported app client
 
   lifecycle {
     prevent_destroy = true
@@ -72,7 +120,6 @@ resource "aws_cognito_user_pool_client" "app" {
       prevent_user_existence_errors,
       read_attributes,
       write_attributes,
-      idp_identifier,
       analytics_configuration
     ]
   }

@@ -19,6 +19,7 @@ eip_allocation_id = "" # e.g. "eipalloc-xxxxxxxx"
 
 # Cognito — must match backend COGNITO_* env (pool id + client id, not the secret)
 cognito_user_pool_id          = "us-east-2_XXXXXXXXX"
+# Must match the Cognito console name exactly.
 cognito_user_pool_name        = "existing-pool-name"
 cognito_user_pool_client_id   = "xxxxxxxxxxxxxxxxxxxxxxxxxx"
 cognito_user_pool_client_name = "existing-client-name"
