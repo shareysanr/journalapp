@@ -1,0 +1,32 @@
+# Production API + worker. Neon, CloudAMQP, Cognito, and OpenAI stay external.
+# Nginx on the EC2 host should proxy to 127.0.0.1:3000.
+#
+# Required next to this file on the server:
+#   .env  — DATABASE_URL, Cognito, RABBITMQ_URL (CloudAMQP), FRONTEND_URL, etc.
+#   DOCKERHUB_USERNAME — Docker Hub user that GitHub Actions publishes as
+#                        ${DOCKERHUB_USERNAME}/journalapp-backend:latest
+#
+# Optional:
+#   IMAGE_TAG — git SHA tag instead of latest
+
+services:
+  api:
+    image: ${DOCKERHUB_USERNAME}/journalapp-backend:${IMAGE_TAG:-latest}
+    container_name: clarity-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    ports:
+      - "127.0.0.1:3000:3000"
+    command: ["node", "dist/server.js"]
+
+  worker:
+    image: ${DOCKERHUB_USERNAME}/journalapp-backend:${IMAGE_TAG:-latest}
+    container_name: clarity-worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+    command: ["node", "dist/workers/weeklyReportWorker.js"]
