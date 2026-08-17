@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiRequest } from "../api";
 import { type Entry } from "../components/EntryForm";
@@ -11,10 +11,30 @@ type EntriesListResponse = {
   };
 };
 
+type WeekGroup = {
+  weekStartDate: string;
+  entries: Entry[];
+};
+
 function formatDisplayDate(dateString: string): string {
   const [year, month, day] = dateString.split("-").map(Number);
   const date = new Date(year, month - 1, day);
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getWeekStartDate(dateString: string): string {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  const daysSinceMonday = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - daysSinceMonday);
+  return formatLocalDate(date);
 }
 
 function getWeekEndDate(weekStartDate: string): string {
@@ -25,11 +45,27 @@ function getWeekEndDate(weekStartDate: string): string {
   return formatLocalDate(weekEnd);
 }
 
-function formatLocalDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function formatWeekRange(weekStartDate: string): string {
+  return `${formatDisplayDate(weekStartDate)} – ${formatDisplayDate(getWeekEndDate(weekStartDate))}`;
+}
+
+function groupEntriesByWeek(entries: Entry[]): WeekGroup[] {
+  const groups = new Map<string, Entry[]>();
+
+  for (const entry of entries) {
+    const weekStartDate = getWeekStartDate(entry.date);
+    const existing = groups.get(weekStartDate);
+    if (existing) {
+      existing.push(entry);
+    } else {
+      groups.set(weekStartDate, [entry]);
+    }
+  }
+
+  return [...groups.entries()].map(([weekStartDate, weekEntries]) => ({
+    weekStartDate,
+    entries: weekEntries
+  }));
 }
 
 function truncate(text: string, maxLength: number): string {
@@ -38,6 +74,51 @@ function truncate(text: string, maxLength: number): string {
     return trimmed;
   }
   return `${trimmed.slice(0, maxLength)}...`;
+}
+
+function EntryCard({
+  entry,
+  deletingId,
+  onDelete
+}: {
+  entry: Entry;
+  deletingId: number | null;
+  onDelete: (entry: Entry) => void;
+}) {
+  return (
+    <li className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">{entry.date}</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Goals: {entry.goalsCompleted}/{entry.numGoals} · Rating: {entry.rating} ·
+            Difficulty: {entry.difficulty} · Mood: {entry.mood ?? "—"} · Motivation:{" "}
+            {entry.motivation ?? "—"}
+          </p>
+          {entry.goalsPlanned.trim() && (
+            <p className="mt-2 text-sm text-slate-700">{truncate(entry.goalsPlanned, 120)}</p>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to={`/entries/${entry.id}/edit`}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+          >
+            Edit
+          </Link>
+          <button
+            type="button"
+            onClick={() => onDelete(entry)}
+            disabled={deletingId === entry.id}
+            className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+          >
+            {deletingId === entry.id ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </div>
+    </li>
+  );
 }
 
 export default function ViewEntriesPage() {
@@ -90,10 +171,24 @@ export default function ViewEntriesPage() {
     }
   }
 
-  const dateRangeLabel =
-    startDate
-      ? `${formatDisplayDate(startDate)} – ${formatDisplayDate(getWeekEndDate(startDate))}`
-      : null;
+  const { currentWeekEntries, previousWeeks } = useMemo(() => {
+    if (!startDate) {
+      return { currentWeekEntries: [] as Entry[], previousWeeks: [] as WeekGroup[] };
+    }
+
+    const currentWeekEnd = getWeekEndDate(startDate);
+    const currentWeekEntries = entries.filter(
+      (entry) => entry.date >= startDate && entry.date <= currentWeekEnd
+    );
+    const previousEntries = entries.filter((entry) => entry.date < startDate);
+
+    return {
+      currentWeekEntries,
+      previousWeeks: groupEntriesByWeek(previousEntries)
+    };
+  }, [entries, startDate]);
+
+  const dateRangeLabel = startDate ? formatWeekRange(startDate) : null;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -112,7 +207,7 @@ export default function ViewEntriesPage() {
         </div>
       )}
 
-      {!loading && !error && entries.length === 0 && (
+      {!loading && !error && currentWeekEntries.length === 0 && (
         <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-600">
           No entries yet this week.{" "}
           <Link to="/entries/new" className="font-semibold text-indigo-600 hover:text-indigo-700">
@@ -121,47 +216,44 @@ export default function ViewEntriesPage() {
         </div>
       )}
 
-      {!loading && !error && entries.length > 0 && (
+      {!loading && !error && currentWeekEntries.length > 0 && (
         <ul className="mt-6 flex flex-col gap-4">
-          {entries.map((entry) => (
-            <li
+          {currentWeekEntries.map((entry) => (
+            <EntryCard
               key={entry.id}
-              className="rounded-xl border border-slate-200 bg-slate-50 p-5"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">{entry.date}</h2>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Goals: {entry.goalsCompleted}/{entry.numGoals} · Rating: {entry.rating} ·
-                    Difficulty: {entry.difficulty}
-                  </p>
-                  {entry.goalsPlanned.trim() && (
-                    <p className="mt-2 text-sm text-slate-700">
-                      {truncate(entry.goalsPlanned, 120)}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Link
-                    to={`/entries/${entry.id}/edit`}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                  >
-                    Edit
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(entry)}
-                    disabled={deletingId === entry.id}
-                    className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {deletingId === entry.id ? "Deleting..." : "Delete"}
-                  </button>
-                </div>
-              </div>
-            </li>
+              entry={entry}
+              deletingId={deletingId}
+              onDelete={(item) => void handleDelete(item)}
+            />
           ))}
         </ul>
+      )}
+
+      {!loading && !error && previousWeeks.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-xl font-bold text-slate-900">Previous weeks</h2>
+          <p className="mt-1 text-sm text-slate-600">Browse older journal entries, newest first.</p>
+
+          <div className="mt-6 flex flex-col gap-8">
+            {previousWeeks.map((week) => (
+              <section key={week.weekStartDate}>
+                <h3 className="text-sm font-semibold text-slate-700">
+                  {formatWeekRange(week.weekStartDate)}
+                </h3>
+                <ul className="mt-3 flex flex-col gap-4">
+                  {week.entries.map((entry) => (
+                    <EntryCard
+                      key={entry.id}
+                      entry={entry}
+                      deletingId={deletingId}
+                      onDelete={(item) => void handleDelete(item)}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

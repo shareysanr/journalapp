@@ -5,15 +5,29 @@ export type EntryStatsInput = {
   goalsCompleted: number;
   numGoals: number;
   rating: number;
+  mood: number | null;
+  motivation: number | null;
   distractions: string[];
   negativeComponents: string[];
   positiveComponents: string[];
+};
+
+export type ScaleStats = {
+  average: number;
+  highest: number;
+  lowest: number;
 };
 
 export type WeeklyEntryMetrics = {
   accomplishments: number;
   failures: number;
   averageRating: number;
+  averageMood: number | null;
+  averageMotivation: number | null;
+  highestMood: number | null;
+  lowestMood: number | null;
+  highestMotivation: number | null;
+  lowestMotivation: number | null;
   commonDistractions: string[];
   commonNegativeComponents: string[];
   commonPositiveComponents: string[];
@@ -64,11 +78,31 @@ export function computeAverageRating(ratings: number[]): number {
   return Math.round((sum / ratings.length) * 10) / 10;
 }
 
+export function presentNumbers(values: Array<number | null | undefined>): number[] {
+  return values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+}
+
+export function computeScaleStats(values: number[]): ScaleStats | null {
+  if (values.length === 0) {
+    return null;
+  }
+
+  return {
+    average: computeAverageRating(values),
+    highest: Math.max(...values),
+    lowest: Math.min(...values)
+  };
+}
+
 export function computeWeeklyEntryMetrics(entries: EntryStatsInput[]): WeeklyEntryMetrics {
   const accomplishments = entries.reduce((sum, entry) => sum + entry.goalsCompleted, 0);
   const totalGoals = entries.reduce((sum, entry) => sum + entry.numGoals, 0);
   const failures = Math.max(0, totalGoals - accomplishments);
   const averageRating = computeAverageRating(entries.map((entry) => entry.rating));
+  const moodStats = computeScaleStats(presentNumbers(entries.map((entry) => entry.mood)));
+  const motivationStats = computeScaleStats(
+    presentNumbers(entries.map((entry) => entry.motivation))
+  );
   const commonDistractions = topCommon(
     entries.flatMap((entry) => entry.distractions),
     TOP_COMMON_LIMIT
@@ -87,6 +121,12 @@ export function computeWeeklyEntryMetrics(entries: EntryStatsInput[]): WeeklyEnt
     accomplishments,
     failures,
     averageRating,
+    averageMood: moodStats?.average ?? null,
+    averageMotivation: motivationStats?.average ?? null,
+    highestMood: moodStats?.highest ?? null,
+    lowestMood: moodStats?.lowest ?? null,
+    highestMotivation: motivationStats?.highest ?? null,
+    lowestMotivation: motivationStats?.lowest ?? null,
     commonDistractions,
     commonNegativeComponents,
     commonPositiveComponents,
