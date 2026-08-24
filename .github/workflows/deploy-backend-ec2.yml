@@ -1,0 +1,47 @@
+name: Deploy Backend to EC2
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Backend Docker Image"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            cd /opt/clarity
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
+
+            docker compose -f docker-compose.prod.yml ps
+
+            # Verify containers are running
+            test "$(docker inspect -f '{{.State.Running}}' clarity-api)" = "true"
+            test "$(docker inspect -f '{{.State.Running}}' clarity-worker)" = "true"
+
+            # Wait for backend health endpoint to respond
+            for i in {1..20}; do
+              if curl -fsS http://127.0.0.1:3000/ > /dev/null; then
+                echo "Backend health check passed."
+                exit 0
+              fi
+              sleep 3
+            done
+
+            echo "Backend health check failed."
+            exit 1
