@@ -33,6 +33,7 @@ jobs:
             # Verify containers are running
             test "$(docker inspect -f '{{.State.Running}}' clarity-api)" = "true"
             test "$(docker inspect -f '{{.State.Running}}' clarity-worker)" = "true"
+            test "$(docker inspect -f '{{.State.Running}}' clarity-alloy)" = "true"
 
             # Wait for backend health endpoint to respond
             for i in {1..20}; do

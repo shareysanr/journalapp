@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { logger } from "./logger";
 
 export type WeeklyNarrativeInput = {
   weekStartDate: string;
@@ -36,10 +37,15 @@ export async function generateWeeklyNarrative(
 ): Promise<WeeklyNarrative | null> {
   const client = getClient();
   if (!client) {
+    logger.warn({ event: "openai_not_configured" }, "OPENAI_API_KEY is missing; using fallback");
     return null;
   }
 
   const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+  logger.info(
+    { event: "openai_weekly_narrative_requested", model, entryCount: input.entryCount },
+    "Requesting weekly narrative from OpenAI"
+  );
 
   try {
     const response = await client.chat.completions.create({
@@ -61,19 +67,23 @@ export async function generateWeeklyNarrative(
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
+      logger.warn({ event: "openai_weekly_narrative_empty_response", model });
       return null;
     }
 
     const parsed = JSON.parse(content) as { summary?: string; recommendations?: string };
     if (!parsed.summary || !parsed.recommendations) {
+      logger.warn({ event: "openai_weekly_narrative_invalid_json_shape", model });
       return null;
     }
 
+    logger.info({ event: "openai_weekly_narrative_success", model }, "OpenAI narrative generated");
     return {
       summary: parsed.summary,
       recommendations: parsed.recommendations
     };
-  } catch {
+  } catch (err) {
+    logger.error({ event: "openai_weekly_narrative_error", model, err }, "OpenAI request failed");
     return null;
   }
 }

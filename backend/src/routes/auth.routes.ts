@@ -7,6 +7,7 @@ import {
 import { cognitoClient, cognitoEnv, computeSecretHash } from "../config/cognito";
 import { requireAuth } from "../middleware/requireAuth";
 import { cognitoErrorMessage, cognitoErrorStatus } from "../utils/cognitoErrors";
+import { logger } from "../config/logger";
 
 const router = Router();
 
@@ -47,7 +48,9 @@ router.post("/api/v1/signup", async (req: Request, res: Response) => {
         userConfirmed: out.UserConfirmed
       }
     });
+    logger.info({ event: "signup_success", username: usernameStr, userSub: out.UserSub });
   } catch (err) {
+    logger.warn({ event: "signup_failed", username: usernameStr, err });
     res.status(cognitoErrorStatus(err)).json({
       error: { message: cognitoErrorMessage(err) }
     });
@@ -75,8 +78,10 @@ router.post("/api/v1/confirm-signup", async (req: Request, res: Response) => {
       })
     );
 
+    logger.info({ event: "confirm_signup_success", username: usernameStr });
     res.json({ data: { confirmed: true } });
   } catch (err) {
+    logger.warn({ event: "confirm_signup_failed", username: usernameStr, err });
     res.status(cognitoErrorStatus(err)).json({
       error: { message: cognitoErrorMessage(err) }
     });
@@ -108,6 +113,7 @@ router.post("/api/v1/login", async (req: Request, res: Response) => {
     );
 
     if (out.AuthenticationResult) {
+      logger.info({ event: "login_success", username: usernameStr });
       return res.json({
         data: {
           accessToken: out.AuthenticationResult.AccessToken,
@@ -120,6 +126,7 @@ router.post("/api/v1/login", async (req: Request, res: Response) => {
     }
 
     if (out.ChallengeName) {
+      logger.info({ event: "login_challenge", username: usernameStr, challenge: out.ChallengeName });
       return res.status(200).json({
         data: {
           challengeName: out.ChallengeName,
@@ -129,8 +136,10 @@ router.post("/api/v1/login", async (req: Request, res: Response) => {
       });
     }
 
+    logger.warn({ event: "login_unexpected_response", username: usernameStr });
     res.status(400).json({ error: { message: "Unexpected login response" } });
   } catch (err) {
+    logger.warn({ event: "login_failed", username: usernameStr, err });
     res.status(cognitoErrorStatus(err)).json({
       error: { message: cognitoErrorMessage(err) }
     });

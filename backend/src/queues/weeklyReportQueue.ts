@@ -1,5 +1,6 @@
 import type { Channel } from "amqplib";
 import { getRabbitmqChannel } from "../config/rabbitmq";
+import { logger } from "../config/logger";
 
 export type WeeklyReportJobMessage = {
   userId: number;
@@ -18,8 +19,9 @@ async function getQueueChannel(): Promise<Channel> {
       durable: true
     });
     queueAsserted = true;
-    console.log(
-      `[weekly-report-queue] Queue "${WEEKLY_REPORT_QUEUE_NAME}" asserted (durable)`
+    logger.info(
+      { event: "weekly_report_queue_asserted", queue: WEEKLY_REPORT_QUEUE_NAME, durable: true },
+      "Weekly report queue asserted"
     );
   }
   return ch;
@@ -36,12 +38,26 @@ export async function publishWeeklyReportJob(
   });
 
   if (!ok) {
-    console.warn(
-      `[weekly-report-queue] sendToQueue returned false for user ${job.userId} (${job.weekStartDate} to ${job.weekEndDate})`
+    logger.warn(
+      {
+        event: "weekly_report_job_publish_backpressure",
+        queue: WEEKLY_REPORT_QUEUE_NAME,
+        userId: job.userId,
+        weekStartDate: job.weekStartDate,
+        weekEndDate: job.weekEndDate
+      },
+      "sendToQueue returned false"
     );
   } else {
-    console.log(
-      `[weekly-report-queue] Queued weekly report job for user ${job.userId} (${job.weekStartDate} to ${job.weekEndDate})`
+    logger.info(
+      {
+        event: "weekly_report_job_published",
+        queue: WEEKLY_REPORT_QUEUE_NAME,
+        userId: job.userId,
+        weekStartDate: job.weekStartDate,
+        weekEndDate: job.weekEndDate
+      },
+      "Queued weekly report job"
     );
   }
 }
