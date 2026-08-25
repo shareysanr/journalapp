@@ -5,6 +5,8 @@
 #   .env  — DATABASE_URL, Cognito, RABBITMQ_URL (CloudAMQP), FRONTEND_URL, etc.
 #   DOCKERHUB_USERNAME — Docker Hub user that GitHub Actions publishes as
 #                        ${DOCKERHUB_USERNAME}/journalapp-backend:latest
+#   alloy/config.alloy — Grafana Alloy log-shipping config
+#   GRAFANA_CLOUD_LOGS_URL, GRAFANA_CLOUD_LOGS_USERNAME, GRAFANA_CLOUD_LOGS_TOKEN
 #
 # Optional:
 #   IMAGE_TAG — git SHA tag instead of latest
@@ -30,3 +32,29 @@ services:
     environment:
       NODE_ENV: production
     command: ["node", "dist/workers/weeklyReportWorker.js"]
+
+  alloy:
+    image: grafana/alloy:v1.10.2
+    container_name: clarity-alloy
+    restart: unless-stopped
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
+    environment:
+      GRAFANA_CLOUD_LOGS_URL: ${GRAFANA_CLOUD_LOGS_URL}
+      GRAFANA_CLOUD_LOGS_USERNAME: ${GRAFANA_CLOUD_LOGS_USERNAME}
+      GRAFANA_CLOUD_LOGS_TOKEN: ${GRAFANA_CLOUD_LOGS_TOKEN}
+    ports:
+      - "127.0.0.1:12345:12345"
+    depends_on:
+      - api
+      - worker
+
+volumes:
+  alloy-data:

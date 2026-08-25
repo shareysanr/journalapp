@@ -21,3 +21,6 @@ terraform/terraform.tfvars
 tfplan
 .terraformrc
 terraform.rc
+
+# Environment variables
+.env

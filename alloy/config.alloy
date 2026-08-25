@@ -1,0 +1,58 @@
+// Grafana Alloy — ship Docker logs from clarity-api and clarity-worker to Grafana Cloud Logs (Loki).
+// Credentials come from environment variables. Do not put secrets in this file.
+
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+discovery.docker "clarity" {
+  host = "unix:///var/run/docker.sock"
+
+  filter {
+    name   = "name"
+    values = ["clarity-api", "clarity-worker"]
+  }
+}
+
+discovery.relabel "clarity" {
+  targets = discovery.docker.clarity.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+}
+
+loki.source.docker "clarity" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.clarity.output
+  labels        = {
+    job = "clarity",
+    env = "production",
+  }
+  relabel_rules = discovery.relabel.clarity.rules
+  forward_to    = [loki.write.grafana_cloud.receiver]
+}
+
+loki.write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_CLOUD_LOGS_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_CLOUD_LOGS_USERNAME")
+      password = sys.env("GRAFANA_CLOUD_LOGS_TOKEN")
+    }
+  }
+
+  external_labels = {
+    app = "clarity",
+    env = "production",
+  }
+}
