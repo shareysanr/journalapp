@@ -24,34 +24,27 @@ Nginx runs directly on the EC2 host and reverse proxies requests to the API cont
 
 # Deployment Pipeline
 
+Production runs a **pinned SemVer image** (for example `v0.1.0`), not the mutable `latest` tag.
+
 ```
 Developer
      │
      ▼
-GitHub Pull Request
+GitHub Pull Request → merge into main
      │
      ▼
-Merge into main
+Create & push Git tag  (e.g. v0.1.0)
      │
      ▼
-GitHub Actions
-     │
-     ├──────────────► Backend Tests
-     │
-     ├──────────────► AI Code Review
-     │
+GitHub Actions: Build and Push Backend Docker Image
+     │  tags Docker Hub image as v0.1.0 (+ latest for convenience)
      ▼
-Build Docker Image
-     │
+GitHub Actions: Deploy Backend to EC2
+     │  syncs /opt/clarity to origin/main
+     │  sets BACKEND_IMAGE_TAG=v0.1.0 in /opt/clarity/.env
+     │  docker compose pull && up -d
      ▼
-Push Image to Docker Hub
-     │
-     ▼
-SSH into EC2
-     │
-     ▼
-docker compose pull
-docker compose up -d
+clarity-api / clarity-worker run journalapp-backend:v0.1.0
 ```
 
 ---
@@ -118,6 +111,7 @@ The production `.env` should contain the environment variables from `backend/.en
 - OpenAI API key
 - `FRONTEND_URL`
 - `DOCKERHUB_USERNAME`
+- `BACKEND_IMAGE_TAG` (SemVer Docker tag, e.g. `v0.1.0` — required; do not use `latest`)
 - `GRAFANA_CLOUD_LOGS_URL`
 - `GRAFANA_CLOUD_LOGS_USERNAME`
 - `GRAFANA_CLOUD_LOGS_TOKEN`
@@ -178,48 +172,57 @@ The following steps assume that the production AWS infrastructure has already be
 docker login
 ```
 
-4. Pull the latest production image.
+4. Set `BACKEND_IMAGE_TAG` in production `.env` to a published SemVer tag (for example `v0.1.0`).
+5. Pull that versioned image.
 
 ```bash
 docker compose -f docker-compose.prod.yml pull
 ```
 
-5. Start the application.
+6. Start the application.
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-6. Continue with the verification steps.
+7. Continue with the verification steps.
+
+---
+
+# SemVer Release Process (production)
+
+Production should only run versioned images such as `v0.1.0`. Git tags are the source of truth.
+
+1. Merge the release work into `main`.
+2. From a clean checkout of `main`, create an annotated SemVer tag:
+
+```bash
+git checkout main
+git pull origin main
+git tag -a v0.1.0 -m "Release v0.1.0"
+git push origin v0.1.0
+```
+
+3. GitHub Actions workflow **Build and Push Backend Docker Image** builds and pushes:
+   - `${DOCKERHUB_USERNAME}/journalapp-backend:v0.1.0`
+   - `${DOCKERHUB_USERNAME}/journalapp-backend:latest` (convenience only)
+4. Workflow **Deploy Backend to EC2** runs after that build succeeds and:
+   - syncs `/opt/clarity` with `origin/main` (`git fetch` / `checkout` / `reset --hard`)
+   - writes `BACKEND_IMAGE_TAG=v0.1.0` into `/opt/clarity/.env`
+   - runs `docker compose -f docker-compose.prod.yml pull` and `up -d`
+   - verifies `clarity-api`, `clarity-worker`, `clarity-alloy`, and `http://127.0.0.1:3000/`
+
+You can also deploy a specific tag manually from GitHub Actions → **Deploy Backend to EC2** → **Run workflow** and set `backend_image_tag` (for example `v0.1.0`).
+
+`BACKEND_IMAGE_TAG` lives only in `/opt/clarity/.env` on the server (or is updated there by the deploy workflow). Do not commit secrets or production `.env` to Git.
 
 ---
 
 # Incremental Deployment
 
-Application updates are deployed by merging a Pull Request into `main`. GitHub Actions automatically runs the backend test suite, performs an AI code review, builds a new Docker image, and publishes it to Docker Hub. The production EC2 instance is then updated by pulling the new image and restarting the containers.
+Day-to-day CI still runs on pull requests and pushes to `main` (tests, AI review, optional `latest`/SHA image builds). **Production version bumps** happen when you push a SemVer Git tag as described above.
 
-Deployment workflow:
-
-1. Developer opens a Pull Request.
-2. GitHub Actions executes the CI pipeline.
-3. Backend tests run.
-4. AI Code Review comments on the Pull Request.
-5. GitHub Actions builds the backend Docker image.
-6. The image is pushed to Docker Hub.
-7. SSH into the EC2 instance.
-8. Pull the newest Docker image.
-
-```bash
-docker compose -f docker-compose.prod.yml pull
-```
-
-9. Restart the containers.
-
-```bash
-docker compose -f docker-compose.prod.yml up -d
-```
-
-No application rebuild occurs on the production server. The server simply downloads the already-built Docker image.
+Config-only changes (`docker-compose.prod.yml`, `alloy/**`, or the deploy workflow) can still trigger deploy on push to `main`; those deploys keep the existing `BACKEND_IMAGE_TAG` already set in `/opt/clarity/.env`.
 
 ---
 
@@ -337,13 +340,19 @@ You should see Pino JSON lines from the API and worker. If nothing appears, chec
 
 # Rollback
 
-If a deployment introduces an issue, production can be rolled back by deploying a previous Docker image tag.
+If a deployment introduces an issue, roll back to a previous SemVer image.
 
-Set `IMAGE_TAG` inside the production `.env` to a previously published image tag.
+Option A — GitHub Actions (preferred):
 
-Then run:
+1. Actions → **Deploy Backend to EC2** → **Run workflow**
+2. Set `backend_image_tag` to a previous tag (for example `v0.1.0`)
+3. Run the workflow
+
+Option B — on the server:
 
 ```bash
+cd /opt/clarity
+# edit .env: BACKEND_IMAGE_TAG=v0.1.0
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```

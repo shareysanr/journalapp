@@ -1,38 +1,74 @@
 # Builds the backend Docker image and pushes it to Docker Hub.
+# - Push Git tag v*: image tags vX.Y.Z + latest (production deploys the SemVer tag)
+# - Push to main: image tags latest + git SHA (convenience only; production ignores latest)
 name: Build and Push Backend Docker Image
 
 on:
   push:
+    tags:
+      - "v*"
     branches:
       - main
-  # Only run when backend code changes or this workflow file changes.
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-docker.yml"
+  workflow_dispatch:
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # Download the repository so Docker can access backend/Dockerfile and source files.
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # Authenticate with Docker Hub using repository secrets.
+      - name: Detect whether a main push needs a rebuild
+        id: should_build
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # main: rebuild only if backend or this workflow changed vs previous commit
+          if git diff --name-only "$BEFORE" "${{ github.sha }}" \
+            | grep -E '^(backend/|\.github/workflows/backend-docker\.yml$)' >/dev/null; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "No backend changes on main; skipping image build."
+          fi
+
       - name: Log in to Docker Hub
+        if: steps.should_build.outputs.build == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      # Build the image from backend/Dockerfile and push both tags to Docker Hub.
+      - name: Resolve image tags
+        if: steps.should_build.outputs.build == 'true'
+        id: meta
+        run: |
+          IMAGE="${{ secrets.DOCKER_USERNAME }}/journalapp-backend"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tags=${IMAGE}:${{ github.ref_name }},${IMAGE}:latest" >> "$GITHUB_OUTPUT"
+            echo "Building SemVer release image: ${{ github.ref_name }}"
+          else
+            echo "tags=${IMAGE}:latest,${IMAGE}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "Building branch image: latest + ${{ github.sha }}"
+          fi
+
       - name: Build and push Docker image
+        if: steps.should_build.outputs.build == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/journalapp-backend:latest
-            ${{ secrets.DOCKER_USERNAME }}/journalapp-backend:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
