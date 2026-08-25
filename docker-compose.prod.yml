@@ -4,16 +4,15 @@
 # Required next to this file on the server:
 #   .env  — DATABASE_URL, Cognito, RABBITMQ_URL (CloudAMQP), FRONTEND_URL, etc.
 #   DOCKERHUB_USERNAME — Docker Hub user that GitHub Actions publishes as
-#                        ${DOCKERHUB_USERNAME}/journalapp-backend:latest
+#                        ${DOCKERHUB_USERNAME}/journalapp-backend:<tag>
+#   BACKEND_IMAGE_TAG — SemVer Docker tag to run in production (e.g. v0.1.0)
+#                       Production must NOT rely on the mutable "latest" tag.
 #   alloy/config.alloy — Grafana Alloy log-shipping config
 #   GRAFANA_CLOUD_LOGS_URL, GRAFANA_CLOUD_LOGS_USERNAME, GRAFANA_CLOUD_LOGS_TOKEN
-#
-# Optional:
-#   IMAGE_TAG — git SHA tag instead of latest
 
 services:
   api:
-    image: ${DOCKERHUB_USERNAME}/journalapp-backend:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME}/journalapp-backend:${BACKEND_IMAGE_TAG}
     container_name: clarity-api
     restart: unless-stopped
     env_file: .env
@@ -25,7 +24,7 @@ services:
     command: ["node", "dist/server.js"]
 
   worker:
-    image: ${DOCKERHUB_USERNAME}/journalapp-backend:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME}/journalapp-backend:${BACKEND_IMAGE_TAG}
     container_name: clarity-worker
     restart: unless-stopped
     env_file: .env

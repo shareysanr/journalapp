@@ -4,8 +4,12 @@ on:
   workflow_run:
     workflows: ["Build and Push Backend Docker Image"]
     types: [completed]
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      backend_image_tag:
+        description: "SemVer image tag to deploy (e.g. v0.1.0). Leave empty to keep /opt/clarity/.env value."
+        required: false
+        type: string
   push:
     branches:
       - main
@@ -24,13 +28,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Resolve SemVer tag to pin (if any)
+        id: release
+        run: |
+          TAG=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.backend_image_tag }}"
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            HEAD_BRANCH="${{ github.event.workflow_run.head_branch }}"
+            case "$HEAD_BRANCH" in
+              v*) TAG="$HEAD_BRANCH" ;;
+            esac
+          fi
+          echo "backend_image_tag=${TAG}" >> "$GITHUB_OUTPUT"
+          if [ -n "$TAG" ]; then
+            echo "Will pin production to BACKEND_IMAGE_TAG=${TAG}"
+          else
+            echo "No SemVer pin from this event; using existing /opt/clarity/.env BACKEND_IMAGE_TAG"
+          fi
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          BACKEND_IMAGE_TAG: ${{ steps.release.outputs.backend_image_tag }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           port: 22
+          envs: BACKEND_IMAGE_TAG
           script_stop: true
           script: |
             set -euo pipefail
@@ -39,6 +65,24 @@ jobs:
             git fetch origin
             git checkout main
             git reset --hard origin/main
+
+            # Pin production to the SemVer tag from a release build or manual dispatch.
+            if [ -n "${BACKEND_IMAGE_TAG:-}" ]; then
+              if grep -q '^BACKEND_IMAGE_TAG=' .env; then
+                sed -i "s/^BACKEND_IMAGE_TAG=.*/BACKEND_IMAGE_TAG=${BACKEND_IMAGE_TAG}/" .env
+              else
+                printf '\nBACKEND_IMAGE_TAG=%s\n' "${BACKEND_IMAGE_TAG}" >> .env
+              fi
+              echo "Pinned BACKEND_IMAGE_TAG=${BACKEND_IMAGE_TAG} in /opt/clarity/.env"
+            fi
+
+            if ! grep -qE '^BACKEND_IMAGE_TAG=v[0-9]' .env; then
+              echo "ERROR: BACKEND_IMAGE_TAG must be set to a SemVer tag (e.g. v0.1.0) in /opt/clarity/.env"
+              echo "Production no longer uses the mutable 'latest' tag."
+              exit 1
+            fi
+
+            echo "Deploying image tag: $(grep '^BACKEND_IMAGE_TAG=' .env)"
 
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
