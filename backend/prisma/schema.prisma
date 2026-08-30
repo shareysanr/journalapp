@@ -15,8 +15,9 @@ model User {
   createdAt       DateTime         @default(now()) @map("created_at")
   entries         Entry[]
   reports         WeeklyReport[]
-  recurringGoals  RecurringGoal[]
-  goalCompletions GoalCompletion[]
+  recurringGoals       RecurringGoal[]
+  goalCompletions      GoalCompletion[]
+  achievementUnlocks   AchievementUnlock[]
 
   @@map("users")
 }
@@ -90,4 +91,34 @@ model GoalCompletion {
   @@index([userId, date])
   @@index([goalId, date])
   @@map("goal_completions")
+}
+
+model AchievementDefinition {
+  id          Int                 @id @default(autoincrement())
+  key         String              @unique
+  title       String
+  description String
+  category    String
+  icon        String
+  sortOrder   Int                 @map("sort_order")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  unlocks     AchievementUnlock[]
+
+  @@index([category, sortOrder])
+  @@map("achievement_definitions")
+}
+
+model AchievementUnlock {
+  id                      Int                   @id @default(autoincrement())
+  userId                  Int                   @map("user_id")
+  achievementDefinitionId Int                   @map("achievement_definition_id")
+  unlockedAt              DateTime              @default(now()) @map("unlocked_at")
+  user                    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementDefinition   AchievementDefinition @relation(fields: [achievementDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementDefinitionId])
+  @@index([userId])
+  @@index([achievementDefinitionId])
+  @@index([unlockedAt])
+  @@map("achievement_unlocks")
 }

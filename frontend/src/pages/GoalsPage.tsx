@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest } from "../api";
+import { showAchievementToasts, type UnlockedAchievement } from "../achievements";
+import { useToast } from "../components/ToastProvider";
 
 type WeekDay = {
   date: string;
@@ -27,6 +29,15 @@ type GoalsResponse = {
   };
 };
 
+type GoalCompleteResponse = {
+  data: {
+    goalId: number;
+    date: string;
+    alreadyCompleted: boolean;
+  };
+  newlyUnlockedAchievements?: UnlockedAchievement[];
+};
+
 function WeekProgress({ weekDays }: { weekDays: WeekDay[] }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -52,6 +63,7 @@ function WeekProgress({ weekDays }: { weekDays: WeekDay[] }) {
 }
 
 export default function GoalsPage() {
+  const { showToast } = useToast();
   const [goals, setGoals] = useState<GoalItem[]>([]);
   const [today, setToday] = useState("");
   const [loading, setLoading] = useState(true);
@@ -122,10 +134,14 @@ export default function GoalsPage() {
           auth: true
         });
       } else {
-        await apiRequest(`/api/v1/goals/${goal.id}/complete`, {
+        const response = await apiRequest<GoalCompleteResponse>(`/api/v1/goals/${goal.id}/complete`, {
           method: "POST",
           auth: true
         });
+
+        if (!response.data.alreadyCompleted) {
+          showAchievementToasts(showToast, response.newlyUnlockedAchievements ?? []);
+        }
       }
 
       await loadGoals();

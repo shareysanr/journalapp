@@ -7,6 +7,7 @@ import entriesRoutes from "./routes/entries.routes";
 import weeklyReportsRoutes from "./routes/weeklyReports.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
 import goalsRoutes from "./routes/goals.routes";
+import achievementsRoutes from "./routes/achievements.routes";
 import { startWeeklyReportJob } from "./jobs/weeklyReportJob";
 import { logger, withRequestContext } from "./config/logger";
 
@@ -49,6 +50,7 @@ app.use(entriesRoutes);
 app.use(weeklyReportsRoutes);
 app.use(dashboardRoutes);
 app.use(goalsRoutes);
+app.use(achievementsRoutes);
 app.use((err: unknown, req: Request, res: Response, _next: express.NextFunction) => {
   const requestLogger = (req as Request & { log?: typeof logger }).log ?? logger;
   requestLogger.error(
