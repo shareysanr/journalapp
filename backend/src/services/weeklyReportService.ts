@@ -6,6 +6,7 @@ import {
   type WeeklyNarrativeInput
 } from "../config/openai";
 import { computeWeeklyEntryMetrics, formatDateString, toDateOnly } from "./weeklyReportCalculations";
+import { getRecurringGoalSummariesForWeek } from "./goalService";
 
 export { isValidDateString } from "./weeklyReportCalculations";
 
@@ -72,6 +73,7 @@ export async function generateWeeklyReport(
   });
 
   const metrics = computeWeeklyEntryMetrics(entries);
+  const recurringGoals = await getRecurringGoalSummariesForWeek(userId, weekStartDate, weekEndDate);
 
   const narrativeInput: WeeklyNarrativeInput = {
     weekStartDate,
@@ -88,7 +90,8 @@ export async function generateWeeklyReport(
     commonDistractions: metrics.commonDistractions,
     commonNegativeComponents: metrics.commonNegativeComponents,
     commonPositiveComponents: metrics.commonPositiveComponents,
-    entryCount: metrics.entryCount
+    entryCount: metrics.entryCount,
+    recurringGoals
   };
 
   const narrative =
