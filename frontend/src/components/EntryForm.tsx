@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { apiRequest, parseCommaList } from "../api";
+import { showAchievementToasts, type UnlockedAchievement } from "../achievements";
+import { useToast } from "./ToastProvider";
 
 const inputClassName =
   "rounded-lg border border-slate-300 px-3 py-2 text-base font-normal focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200";
@@ -22,6 +24,7 @@ export type Entry = {
 
 type EntryResponse = {
   data: Entry;
+  newlyUnlockedAchievements?: UnlockedAchievement[];
 };
 
 type EntryFormProps = {
@@ -57,6 +60,7 @@ function getDefaultFormState() {
 export default function EntryForm({ entryId, initialValues, onSaved }: EntryFormProps) {
   const isEditMode = entryId !== undefined;
   const initial = getInitialFormState(initialValues);
+  const { showToast } = useToast();
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -126,6 +130,7 @@ export default function EntryForm({ entryId, initialValues, onSaved }: EntryForm
 
       resetFormFields();
       setSuccess(`Entry created for ${response.data.date}.`);
+      showAchievementToasts(showToast, response.newlyUnlockedAchievements ?? []);
     } catch (err) {
       const message =
         err instanceof Error

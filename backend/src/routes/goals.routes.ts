@@ -11,6 +11,7 @@ import {
   parseUpdateGoalPayload
 } from "../utils/goalValidation";
 import { dateStringToUtcStart, formatLocalDate } from "../utils/reportSchedule";
+import { evaluateGoalAchievements } from "../services/achievementService";
 
 const router = Router();
 
@@ -162,13 +163,16 @@ router.post("/api/v1/goals/:goalId/complete", requireAuth, async (req: Request, 
     }
   });
 
+  const newlyUnlockedAchievements = await evaluateGoalAchievements(userId);
+
   logger.info({ event: "goal_completed", userId, goalId, date: today });
   res.status(201).json({
     data: {
       goalId,
       date: today,
       alreadyCompleted: false
-    }
+    },
+    newlyUnlockedAchievements
   });
 });
 

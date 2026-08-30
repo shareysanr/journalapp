@@ -4,6 +4,7 @@ import { prisma } from "../config/prisma";
 import { requireAuth } from "../middleware/requireAuth";
 import { parseEntryPayload } from "../utils/entryValidation";
 import { getUpcomingReportEntryRange } from "../utils/reportSchedule";
+import { evaluateEntryAchievements } from "../services/achievementService";
 
 const router = Router();
 
@@ -64,7 +65,12 @@ router.post("/api/v1/entries", requireAuth, async (req: Request, res: Response) 
     }
   });
 
-  res.status(201).json({ data: toEntry(entry) });
+  const newlyUnlockedAchievements = await evaluateEntryAchievements(req.auth!.userId);
+
+  res.status(201).json({
+    data: toEntry(entry),
+    newlyUnlockedAchievements
+  });
 });
 
 router.get("/api/v1/entries", requireAuth, async (req: Request, res: Response) => {

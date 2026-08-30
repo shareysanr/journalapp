@@ -14,6 +14,7 @@ import ReportsPage from "./pages/ReportsPage";
 import SignupPage from "./pages/SignupPage";
 import ViewReportPage from "./pages/ViewReportPage";
 import GoalsPage from "./pages/GoalsPage";
+import AchievementsPage from "./pages/AchievementsPage";
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/entries/new" element={<NewEntryPage />} />
           <Route path="/entries/:entryId/edit" element={<EditEntryPage />} />
           <Route path="/goals" element={<GoalsPage />} />
+          <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/reports/view" element={<ViewReportPage />} />
         </Route>

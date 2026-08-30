@@ -5,6 +5,7 @@ import { logger } from "../config/logger";
 import { WEEKLY_REPORT_QUEUE_NAME } from "../queues/weeklyReportQueue";
 import { isWeeklyReportJobMessage } from "../queues/weeklyReportJobMessage";
 import { generateWeeklyReport, saveWeeklyReport } from "../services/weeklyReportService";
+import { evaluateReportAchievements } from "../services/achievementService";
 
 export async function startWeeklyReportWorker(): Promise<void> {
   const channel = await getRabbitmqChannel();
@@ -49,6 +50,15 @@ export async function startWeeklyReportWorker(): Promise<void> {
 
         const report = await generateWeeklyReport(userId, weekStartDate, weekEndDate);
         const saved = await saveWeeklyReport(userId, report);
+        const newlyUnlockedAchievements = await evaluateReportAchievements(userId);
+
+        if (newlyUnlockedAchievements.length > 0) {
+          logger.info({
+            event: "weekly_report_achievements_unlocked",
+            userId,
+            achievementKeys: newlyUnlockedAchievements.map((achievement) => achievement.key)
+          });
+        }
 
         logger.info({
           event: "weekly_report_worker_saved",
