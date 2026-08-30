@@ -42,7 +42,7 @@ GitHub Actions: Build and Push Backend Docker Image
 GitHub Actions: Deploy Backend to EC2
      │  syncs /opt/clarity to origin/main
      │  sets BACKEND_IMAGE_TAG=v0.1.0 in /opt/clarity/.env
-     │  docker compose pull && up -d
+     │  docker compose pull → prisma migrate deploy → up -d
      ▼
 clarity-api / clarity-worker run journalapp-backend:v0.1.0
 ```
@@ -179,13 +179,19 @@ docker login
 docker compose -f docker-compose.prod.yml pull
 ```
 
-6. Start the application.
+6. Apply pending database migrations (uses `DATABASE_URL` from production `.env`):
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm --no-deps api npx prisma migrate deploy
+```
+
+7. Start the application.
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-7. Continue with the verification steps.
+8. Continue with the verification steps.
 
 ---
 
@@ -209,12 +215,72 @@ git push origin v0.1.0
 4. Workflow **Deploy Backend to EC2** runs after that build succeeds and:
    - syncs `/opt/clarity` with `origin/main` (`git fetch` / `checkout` / `reset --hard`)
    - writes `BACKEND_IMAGE_TAG=v0.1.0` into `/opt/clarity/.env`
-   - runs `docker compose -f docker-compose.prod.yml pull` and `up -d`
+   - runs `docker compose -f docker-compose.prod.yml pull`
+   - runs `docker compose -f docker-compose.prod.yml run --rm --no-deps api npx prisma migrate deploy`
+   - runs `docker compose -f docker-compose.prod.yml up -d`
    - verifies `clarity-api`, `clarity-worker`, `clarity-alloy`, and `http://127.0.0.1:3000/`
 
 You can also deploy a specific tag manually from GitHub Actions → **Deploy Backend to EC2** → **Run workflow** and set `backend_image_tag` (for example `v0.1.0`).
 
 `BACKEND_IMAGE_TAG` lives only in `/opt/clarity/.env` on the server (or is updated there by the deploy workflow). Do not commit secrets or production `.env` to Git.
+
+---
+
+# Database Migrations
+
+Schema changes use Prisma migrations. The production Docker image includes the Prisma CLI, `prisma/schema.prisma`, `prisma/migrations/`, and `prisma.config.ts` so migrations can run on deploy.
+
+## Local development
+
+When you change the schema:
+
+```bash
+cd backend
+npx prisma migrate dev --name describe_your_change
+```
+
+This updates `prisma/schema.prisma`, creates a folder under `prisma/migrations/`, and applies the migration to your local database.
+
+Commit **both** `schema.prisma` and the new migration folder.
+
+Do **not** use `npx prisma db push` for schema changes you intend to ship to production.
+
+## Production deployment
+
+Production uses **`npx prisma migrate deploy` only**. The deploy workflow runs it automatically after `docker compose pull` and before `docker compose up -d`:
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm --no-deps api npx prisma migrate deploy
+```
+
+The command reads `DATABASE_URL` from `/opt/clarity/.env` via the `api` service `env_file`. It does not use GitHub secrets or committed env files.
+
+Do **not** run `prisma migrate dev` or `prisma db push` against production.
+
+## One-time baseline (existing production DB)
+
+This project previously applied schema changes with `db push`. Production Neon may already have columns that exist in committed migrations but are not recorded in `_prisma_migrations`.
+
+Before the **first** automated `migrate deploy` after enabling this flow, check whether `mood` and `motivation` already exist on the `entries` table (Neon SQL editor):
+
+```sql
+SELECT column_name
+FROM information_schema.columns
+WHERE table_name = 'entries'
+  AND column_name IN ('mood', 'motivation');
+```
+
+If **both columns exist**, mark the existing migration as already applied (run once on EC2, after pulling an image that includes the Prisma CLI):
+
+```bash
+cd /opt/clarity
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml run --rm --no-deps api npx prisma migrate resolve --applied 20260817155200_add_entry_mood_and_motivation
+```
+
+If the columns do **not** exist, skip `migrate resolve` and let the deploy workflow run `migrate deploy` normally.
+
+After this one-time step, future deploys only apply **new** pending migrations.
 
 ---
 
@@ -380,3 +446,4 @@ docker compose -f docker-compose.prod.yml down
 | Weekly reports are not generated | Verify the worker container is running and connected to CloudAMQP, then inspect the worker logs. |
 | Logs do not appear in Grafana Cloud | Confirm Grafana Cloud Logs env vars are set, `alloy/config.alloy` is on the server, and Alloy is running. Inspect `docker compose -f docker-compose.prod.yml logs alloy`. In Grafana Explore query `{app="clarity"}`. |
 | Alloy container exits | Alloy needs `/var/run/docker.sock` and a valid `GRAFANA_CLOUD_LOGS_URL`. |
+| `prisma migrate deploy` fails with "column already exists" | Production schema was applied via `db push` but `_prisma_migrations` is out of sync. Run the one-time `migrate resolve --applied` command in **Database Migrations** above, then redeploy. |
