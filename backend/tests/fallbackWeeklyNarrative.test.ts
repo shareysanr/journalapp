@@ -21,7 +21,8 @@ describe("fallbackWeeklyNarrative", () => {
       commonDistractions: [],
       commonNegativeComponents: [],
       commonPositiveComponents: [],
-      entryCount: 0
+      entryCount: 0,
+      recurringGoals: []
     };
 
     const result = fallbackWeeklyNarrative(input);
@@ -48,7 +49,8 @@ describe("fallbackWeeklyNarrative", () => {
       commonDistractions: ["phone"],
       commonNegativeComponents: ["stress"],
       commonPositiveComponents: ["focus"],
-      entryCount: 5
+      entryCount: 5,
+      recurringGoals: []
     };
 
     const result = fallbackWeeklyNarrative(input);
@@ -77,7 +79,8 @@ describe("fallbackWeeklyNarrative", () => {
       commonDistractions: ["phone"],
       commonNegativeComponents: ["stress"],
       commonPositiveComponents: ["focus"],
-      entryCount: 5
+      entryCount: 5,
+      recurringGoals: []
     };
 
     const result = fallbackWeeklyNarrative(input);
@@ -85,6 +88,36 @@ describe("fallbackWeeklyNarrative", () => {
     expect(result.summary).toBe(
       "From 2026-07-07 to 2026-07-13, you logged 5 entries, " +
         "completed 8 goals, and had 2 uncompleted goals. Your average rating was 4.5."
+    );
+  });
+
+  it("includes recurring goal consistency in the summary", () => {
+    const input: WeeklyNarrativeInput = {
+      weekStartDate: "2026-07-07",
+      weekEndDate: "2026-07-13",
+      accomplishments: 8,
+      failures: 2,
+      averageRating: 4.5,
+      averageMood: null,
+      averageMotivation: null,
+      highestMood: null,
+      lowestMood: null,
+      highestMotivation: null,
+      lowestMotivation: null,
+      commonDistractions: [],
+      commonNegativeComponents: [],
+      commonPositiveComponents: [],
+      entryCount: 5,
+      recurringGoals: [
+        { title: "Morning walk", completedDays: 5, totalDays: 7 },
+        { title: "Read 20 pages", completedDays: 3, totalDays: 7 }
+      ]
+    };
+
+    const result = fallbackWeeklyNarrative(input);
+
+    expect(result.summary).toContain(
+      "Daily habits: Morning walk (5/7 days), Read 20 pages (3/7 days)."
     );
   });
 });

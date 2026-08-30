@@ -1,6 +1,12 @@
 import OpenAI from "openai";
 import { logger } from "./logger";
 
+export type RecurringGoalWeekSummary = {
+  title: string;
+  completedDays: number;
+  totalDays: number;
+};
+
 export type WeeklyNarrativeInput = {
   weekStartDate: string;
   weekEndDate: string;
@@ -17,6 +23,7 @@ export type WeeklyNarrativeInput = {
   commonNegativeComponents: string[];
   commonPositiveComponents: string[];
   entryCount: number;
+  recurringGoals: RecurringGoalWeekSummary[];
 };
 
 export type WeeklyNarrative = {
@@ -56,7 +63,8 @@ export async function generateWeeklyNarrative(
           role: "system",
           content:
             "You write concise weekly journal reflections. Respond with JSON only, using keys \"summary\" and \"recommendations\". " +
-            "Do not invent statistics; use only the provided metrics. Summary: 2-4 sentences. Recommendations: 2-4 actionable sentences."
+            "Do not invent statistics; use only the provided metrics. Summary: 2-4 sentences. Recommendations: 2-4 actionable sentences. " +
+            "When recurringGoals are provided, mention daily habit consistency alongside journal patterns."
         },
         {
           role: "user",
@@ -109,10 +117,17 @@ export function fallbackWeeklyNarrative(input: WeeklyNarrativeInput): WeeklyNarr
       ? ` Average motivation was ${input.averageMotivation.toFixed(1)} (range ${input.lowestMotivation}–${input.highestMotivation}).`
       : "";
 
+  const recurringGoalsText =
+    input.recurringGoals.length > 0
+      ? ` Daily habits: ${input.recurringGoals
+          .map((goal) => `${goal.title} (${goal.completedDays}/${goal.totalDays} days)`)
+          .join(", ")}.`
+      : "";
+
   return {
     summary:
       `From ${input.weekStartDate} to ${input.weekEndDate}, you logged ${input.entryCount} entries, ` +
-      `completed ${input.accomplishments} goals, and had ${input.failures} uncompleted goals.${ratingText}${moodText}${motivationText}`,
+      `completed ${input.accomplishments} goals, and had ${input.failures} uncompleted goals.${ratingText}${moodText}${motivationText}${recurringGoalsText}`,
     recommendations:
       "Review your most common distractions and negative patterns, then schedule focused blocks around your top positive components next week."
   };

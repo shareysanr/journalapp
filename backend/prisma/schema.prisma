@@ -10,11 +10,13 @@ datasource db {
 }
 
 model User {
-  id         Int            @id @default(autoincrement())
-  cognitoSub String         @unique @map("cognito_sub")
-  createdAt  DateTime       @default(now()) @map("created_at")
-  entries    Entry[]
-  reports    WeeklyReport[]
+  id              Int              @id @default(autoincrement())
+  cognitoSub      String           @unique @map("cognito_sub")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  entries         Entry[]
+  reports         WeeklyReport[]
+  recurringGoals  RecurringGoal[]
+  goalCompletions GoalCompletion[]
 
   @@map("users")
 }
@@ -58,4 +60,34 @@ model WeeklyReport {
 
   @@unique([userId, weekStartDate, weekEndDate])
   @@map("weekly_reports")
+}
+
+model RecurringGoal {
+  id          Int              @id @default(autoincrement())
+  userId      Int              @map("user_id")
+  title       String
+  description String?
+  isActive    Boolean          @default(true) @map("is_active")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completions GoalCompletion[]
+
+  @@index([userId])
+  @@map("recurring_goals")
+}
+
+model GoalCompletion {
+  id        Int           @id @default(autoincrement())
+  goalId    Int           @map("goal_id")
+  userId    Int           @map("user_id")
+  date      DateTime      @db.Date
+  createdAt DateTime      @default(now()) @map("created_at")
+  goal      RecurringGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, date])
+  @@index([userId, date])
+  @@index([goalId, date])
+  @@map("goal_completions")
 }

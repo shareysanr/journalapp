@@ -32,6 +32,9 @@ export default function Navbar() {
           <NavLink to="/entries" end className={navLinkClass}>
             View Entries
           </NavLink>
+          <NavLink to="/goals" className={navLinkClass}>
+            Goals
+          </NavLink>
           <NavLink to="/reports" end className={navLinkClass}>
             Preview Report
           </NavLink>
