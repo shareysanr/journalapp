@@ -28,6 +28,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY prisma.config.ts ./
+COPY prisma ./prisma
 
 EXPOSE 3000
 

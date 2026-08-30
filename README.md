@@ -81,8 +81,9 @@ Clarity is designed for people who want a consistent way to reflect on productiv
   - `docker compose up -d`
 2. Copy and configure backend environment variables:
   - `cp backend/.env.example backend/.env`
-3. Start the backend:
-  - `cd backend && npm ci && npx prisma generate && npx prisma db push && npm run dev`
+3. Start the backend (first time or after schema changes, run migrations):
+  - `cd backend && npm ci && npx prisma generate && npx prisma migrate dev && npm run dev`
+  - When changing the schema, use `npx prisma migrate dev --name <description>` and commit `prisma/schema.prisma` plus the new folder under `prisma/migrations/`.
 4. (Optional) Start the weekly-report worker in a second terminal:
   - `cd backend && npm run dev:worker:weekly-reports`
 5. Start the frontend:
